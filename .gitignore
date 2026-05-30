@@ -1,0 +1,17 @@
+# Dependencies / build output
+node_modules/
+app/node_modules/
+app/dist/
+
+# Local env files (keys live here — never commit)
+.env
+.env.local
+*.local
+
+# The original workbook + analysis — business data, do NOT push to a public repo
+_source/
+
+# OS / editor
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
