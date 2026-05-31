@@ -3,6 +3,8 @@
 A free, full-stack order / inventory / receivables system for a meat-supply business —
 built to replace a 56-tab Google Sheets workbook.
 
+**🔗 Live:** https://vgrateja.github.io/karne/ — deploys automatically on every push to `main`.
+
 - **Frontend:** React + Vite + TypeScript (static site → GitHub Pages)
 - **Backend:** Supabase (Postgres + Auth + Row Level Security + Edge Functions)
 - **SMS intake:** free Android SMS-forwarder app → Supabase Edge Function webhook
@@ -18,8 +20,8 @@ See **`PLAN.md`** for the architecture, the data model, and the build phases.
 - [x] **Phase 1 — Core app:** auth, catalog/price list, customers, enter-an-order-once, automatic inventory (builds clean; needs a Supabase project to run live)
 - [x] **Phase 2 — Records & dashboards:** monthly view (replaces the 31 daily tabs), per-customer statements + payments, inventory valuation
 - [x] **Phase 3 — Printing:** printable receipts + printable monthly report, business-header settings
-- [ ] Phase 4 — SMS intake
-- [ ] Phase 5 — Migrate existing data & deploy
+- [x] **Phase 4 — SMS intake:** Edge Function webhook + parser + review **Inbox** (see `SMS_SETUP.md`)
+- [~] **Phase 5 — Deploy done** (live on GitHub Pages); migrating real data still to do
 
 ---
 
@@ -96,10 +98,12 @@ configured yet" note. To use it for real:
 - **Printing** — a printable **receipt** for any order (🖨 from the order list or after saving)
   and a printable **monthly report**, both headed with the shop name
 - **Settings** — business name / address / phone / receipt footer for the printouts
+- **SMS Inbox** — forwarded texts are parsed into draft orders; review, fix, and confirm into a
+  real order in one tap (setup in `SMS_SETUP.md`)
 - **Dashboard** — sales today + total receivables
 
 ## Next
 
-Phase 4: **SMS intake** — a text to her business number is forwarded (free Android app) to a
-Supabase Edge Function, parsed into a draft order, and shown in an inbox to confirm with one tap.
-Nothing is pushed to GitHub or applied to Supabase without your go-ahead.
+Migrate her real data: import actual customers + opening balances from the workbook and tune the
+product list/prices, staged as SQL to review before applying. Nothing is pushed to GitHub or
+applied to Supabase without your go-ahead.

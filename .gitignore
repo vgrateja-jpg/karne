@@ -11,6 +11,10 @@ app/dist/
 # The original workbook + analysis — business data, do NOT push to a public repo
 _source/
 
+# Her real customer/receivables data — keep private, never push to public repo
+supabase/seed_customers.sql
+app/devserver.log
+
 # OS / editor
 .DS_Store
 .vscode/*

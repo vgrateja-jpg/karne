@@ -12,6 +12,7 @@ import { Inventory } from './pages/Inventory'
 import { Month } from './pages/Month'
 import { Receipt } from './pages/Receipt'
 import { Settings } from './pages/Settings'
+import { Inbox } from './pages/Inbox'
 
 export default function App() {
   return (
@@ -25,6 +26,7 @@ export default function App() {
         }
       >
         <Route path="/" element={<Dashboard />} />
+        <Route path="/inbox" element={<Inbox />} />
         <Route path="/month" element={<Month />} />
         <Route path="/orders/new" element={<NewOrder />} />
         <Route path="/orders/:id/receipt" element={<Receipt />} />
