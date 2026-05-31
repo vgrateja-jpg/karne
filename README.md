@@ -107,6 +107,7 @@ configured yet" note. To use it for real:
 - **Loans & financing** — money borrowed (payable) / lent (receivable) with running balances
 - **Cheques** — register received/issued cheques with due dates + status (pending → cleared)
 - **Branches** — optional: tag orders by location (add branches in Settings)
+- **Butchering** — record a whole animal in, list the cuts + weights; each cut is added to stock (shows yield)
 - **Dashboard** — sales today, receivables, **payables**, cash on hand, and this-month sales /
   purchases / expenses / rough profit
 

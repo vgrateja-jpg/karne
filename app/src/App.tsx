@@ -18,6 +18,7 @@ import { Cash } from './pages/Cash'
 import { Purchases } from './pages/Purchases'
 import { Loans } from './pages/Loans'
 import { Checks } from './pages/Checks'
+import { Butchering } from './pages/Butchering'
 
 export default function App() {
   return (
@@ -40,6 +41,7 @@ export default function App() {
         <Route path="/customers/:id" element={<CustomerStatement />} />
         <Route path="/products" element={<Products />} />
         <Route path="/inventory" element={<Inventory />} />
+        <Route path="/butchering" element={<Butchering />} />
         <Route path="/purchases" element={<Purchases />} />
         <Route path="/expenses" element={<Expenses />} />
         <Route path="/cash" element={<Cash />} />
