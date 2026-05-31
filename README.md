@@ -103,8 +103,12 @@ configured yet" note. To use it for real:
 - **Purchases** — cattle bought (weight × price) + supplier purchases; tracks her supply cost
 - **Expenses** — log salaries, diesel, utilities, etc.; running monthly total
 - **Cash & Banks** — every account's balance, deposits/withdrawals/transfers, total cash on hand
-- **Dashboard** — sales today, receivables, cash on hand, and this-month sales / purchases /
-  expenses / rough profit
+- **Purchases & suppliers** — also tracks **supplier account balances (payables)** + payments to them
+- **Loans & financing** — money borrowed (payable) / lent (receivable) with running balances
+- **Cheques** — register received/issued cheques with due dates + status (pending → cleared)
+- **Branches** — optional: tag orders by location (add branches in Settings)
+- **Dashboard** — sales today, receivables, **payables**, cash on hand, and this-month sales /
+  purchases / expenses / rough profit
 
 ## Next
 

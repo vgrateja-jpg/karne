@@ -144,7 +144,7 @@ export function Purchases() {
   return (
     <div>
       <PageHeader
-        title="Purchases & suppliers"
+        title="Suppliers & purchases"
         action={
           <div className="text-right">
             <div className="text-xs uppercase text-slate-500">Bought this month</div>

@@ -65,7 +65,7 @@ export function Inventory() {
 
   return (
     <div>
-      <PageHeader title="Inventory" />
+      <PageHeader title="Stock" />
       {error && (
         <div className="mb-3">
           <Banner kind="error">{error}</Banner>

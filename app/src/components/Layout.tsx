@@ -1,66 +1,144 @@
+import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 
-const nav = [
-  { to: '/', label: 'Dashboard', end: true },
-  { to: '/inbox', label: 'Inbox' },
-  { to: '/month', label: 'Monthly' },
-  { to: '/orders/new', label: 'New Order' },
-  { to: '/orders', label: 'Orders' },
-  { to: '/customers', label: 'Customers' },
-  { to: '/inventory', label: 'Inventory' },
-  { to: '/purchases', label: 'Purchases' },
-  { to: '/expenses', label: 'Expenses' },
-  { to: '/cash', label: 'Cash' },
-  { to: '/checks', label: 'Cheques' },
-  { to: '/loans', label: 'Loans' },
-  { to: '/products', label: 'Products' },
-  { to: '/settings', label: 'Settings' },
+interface NavItem {
+  to: string
+  label: string
+  icon: string
+  end?: boolean
+}
+interface NavGroup {
+  title: string
+  items: NavItem[]
+}
+
+const groups: NavGroup[] = [
+  {
+    title: 'Daily',
+    items: [
+      { to: '/', label: 'Home', icon: '🏠', end: true },
+      { to: '/orders/new', label: 'New order', icon: '✍️' },
+      { to: '/inbox', label: 'Text orders', icon: '📩' },
+      { to: '/orders', label: 'Orders', icon: '🧾' },
+    ],
+  },
+  {
+    title: 'People',
+    items: [
+      { to: '/customers', label: 'Customers', icon: '👥' },
+      { to: '/purchases', label: 'Suppliers', icon: '🚚' },
+    ],
+  },
+  {
+    title: 'Money',
+    items: [
+      { to: '/cash', label: 'Cash & banks', icon: '💵' },
+      { to: '/expenses', label: 'Expenses', icon: '💸' },
+      { to: '/checks', label: 'Cheques', icon: '💳' },
+      { to: '/loans', label: 'Loans', icon: '🏦' },
+    ],
+  },
+  {
+    title: 'Stock',
+    items: [
+      { to: '/inventory', label: 'Stock', icon: '📦' },
+      { to: '/products', label: 'Prices', icon: '🏷️' },
+    ],
+  },
+  {
+    title: 'Reports & setup',
+    items: [
+      { to: '/month', label: 'Monthly report', icon: '📊' },
+      { to: '/settings', label: 'Settings', icon: '⚙️' },
+    ],
+  },
 ]
 
 export function Layout() {
   const { signOut, session } = useAuth()
   const navigate = useNavigate()
+  const [open, setOpen] = useState(false)
 
   async function handleSignOut() {
     await signOut()
     navigate('/login')
   }
 
-  return (
-    <div className="min-h-full">
-      <header className="no-print sticky top-0 z-10 border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
-          <span className="text-lg font-bold tracking-tight text-rose-600">Karne</span>
-          <nav className="flex flex-1 flex-wrap items-center gap-1">
-            {nav.map((n) => (
+  const sidebar = (
+    <div className="flex h-full flex-col">
+      <div className="flex items-center gap-2 px-4 py-4">
+        <span className="text-xl font-bold tracking-tight text-rose-600">🥩 Karne</span>
+      </div>
+      <nav className="flex-1 overflow-y-auto px-3 pb-2">
+        {groups.map((g) => (
+          <div key={g.title} className="mb-3">
+            <div className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+              {g.title}
+            </div>
+            {g.items.map((it) => (
               <NavLink
-                key={n.to}
-                to={n.to}
-                end={n.end}
+                key={it.to}
+                to={it.to}
+                end={it.end}
+                onClick={() => setOpen(false)}
                 className={({ isActive }) =>
-                  `rounded-lg px-3 py-1.5 text-sm font-medium ${
+                  `flex items-center gap-2.5 rounded-lg px-2 py-2 text-sm font-medium ${
                     isActive ? 'bg-rose-50 text-rose-700' : 'text-slate-600 hover:bg-slate-100'
                   }`
                 }
               >
-                {n.label}
+                <span className="w-5 text-center text-base">{it.icon}</span>
+                {it.label}
               </NavLink>
             ))}
-          </nav>
-          <div className="flex items-center gap-2 text-sm text-slate-500">
-            <span className="hidden sm:inline">{session?.user?.email}</span>
-            <button
-              onClick={handleSignOut}
-              className="rounded-lg border border-slate-300 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50"
-            >
-              Sign out
-            </button>
           </div>
-        </div>
+        ))}
+      </nav>
+      <div className="border-t border-slate-200 p-3 text-xs text-slate-500">
+        <div className="truncate px-2 pb-2">{session?.user?.email}</div>
+        <button
+          onClick={handleSignOut}
+          className="w-full rounded-lg border border-slate-300 px-3 py-2 font-medium text-slate-700 hover:bg-slate-50"
+        >
+          Sign out
+        </button>
+      </div>
+    </div>
+  )
+
+  return (
+    <div className="min-h-full">
+      {/* mobile top bar */}
+      <header className="no-print sticky top-0 z-20 flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-3 md:hidden">
+        <button
+          onClick={() => setOpen(true)}
+          aria-label="Open menu"
+          className="text-2xl leading-none text-slate-700"
+        >
+          ☰
+        </button>
+        <span className="text-lg font-bold tracking-tight text-rose-600">🥩 Karne</span>
       </header>
-      <main className="mx-auto max-w-5xl px-4 py-6">
-        <Outlet />
+
+      {/* desktop sidebar */}
+      <aside className="no-print fixed inset-y-0 left-0 hidden w-60 border-r border-slate-200 bg-white md:block">
+        {sidebar}
+      </aside>
+
+      {/* mobile drawer */}
+      {open && (
+        <div className="no-print fixed inset-0 z-30 md:hidden">
+          <div className="absolute inset-0 bg-black/30" onClick={() => setOpen(false)} />
+          <div className="absolute inset-y-0 left-0 w-64 bg-white shadow-xl">{sidebar}</div>
+        </div>
+      )}
+
+      {/* content */}
+      <main className="px-4 py-6 md:ml-60 print:ml-0">
+        <div className="mx-auto max-w-5xl">
+          <Outlet />
+        </div>
       </main>
     </div>
   )

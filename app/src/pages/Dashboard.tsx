@@ -111,8 +111,8 @@ export function Dashboard() {
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Sales today" value={v(m.salesToday)} sub={`${m.ordersToday} order(s) today`} />
-        <Stat label="Receivables" value={v(m.receivables)} sub={`${m.owing} owing you`} tone="bad" />
-        <Stat label="Payables" value={v(m.payables)} sub="owed to suppliers" tone="bad" />
+        <Stat label="Money owed to you" value={v(m.receivables)} sub={`${m.owing} customer(s)`} tone="bad" />
+        <Stat label="Money you owe" value={v(m.payables)} sub="to suppliers" tone="bad" />
         <Stat label="Cash on hand" value={v(m.cashOnHand)} sub="across all accounts" />
       </div>
 

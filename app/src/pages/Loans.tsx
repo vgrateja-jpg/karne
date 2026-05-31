@@ -182,7 +182,7 @@ export function Loans() {
                 {loans.map((l) => (
                   <tr key={l.id} className="border-b border-slate-100 last:border-0">
                     <td className="py-2 pr-3 font-medium text-slate-800">{l.party_name}</td>
-                    <td className="py-2 pr-3 text-slate-500">{l.direction}</td>
+                    <td className="py-2 pr-3 text-slate-500">{l.direction === 'payable' ? 'You owe' : 'Owed to you'}</td>
                     <td className="py-2 pr-3 text-slate-500">{l.notes ?? '—'}</td>
                     <td className={`py-2 pr-3 text-right tabular-nums ${l.direction === 'payable' ? 'text-rose-600' : 'text-emerald-600'}`}>
                       {money(balances[l.id] ?? 0)}

@@ -94,7 +94,7 @@ export function Customers() {
             <Field label="Phone (for SMS match)">
               <Input value={editing.phone} onChange={(e) => setEditing({ ...editing, phone: e.target.value })} />
             </Field>
-            <Field label="Opening balance (arrears)">
+            <Field label="Starting balance owed">
               <Input
                 type="number"
                 step="0.01"

@@ -52,7 +52,7 @@ export function Inbox() {
 
   return (
     <div>
-      <PageHeader title={`SMS inbox${rows.length ? ` (${rows.length})` : ''}`} />
+      <PageHeader title={`Text orders${rows.length ? ` (${rows.length})` : ''}`} />
       {error && (
         <div className="mb-3">
           <Banner kind="error">{error}</Banner>
