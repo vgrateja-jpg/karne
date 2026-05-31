@@ -70,25 +70,40 @@ Deno.serve(async (req: Request) => {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   )
 
-  const [{ data: products }, { data: aliases }, { data: customers }] = await Promise.all([
-    supabase.from('products').select('id,name,price,unit').eq('is_active', true),
-    supabase.from('product_aliases').select('product_id,alias'),
-    supabase.from('customers').select('id,phone'),
-  ])
+  const [{ data: products }, { data: aliases }, { data: customers }, { data: senders }] =
+    await Promise.all([
+      supabase.from('products').select('id,name,price,unit').eq('is_active', true),
+      supabase.from('product_aliases').select('product_id,alias'),
+      supabase.from('customers').select('id,phone'),
+      supabase.from('sms_senders').select('phone,customer_id').eq('is_active', true),
+    ])
 
   const parsed = parseOrder(text, (products ?? []) as ProductRow[], (aliases ?? []) as AliasRow[])
-  const matched = matchCustomer(from, (customers ?? []) as { id: string; phone: string | null }[])
+
+  // Sender resolution: registered number → known + its linked customer.
+  // Otherwise fall back to matching a customer by phone, and flag as unknown.
+  const tail = digitsTail(from)
+  const sender = tail
+    ? ((senders ?? []) as { phone: string; customer_id: string | null }[]).find(
+        (s) => digitsTail(s.phone) === tail,
+      )
+    : undefined
+  const senderKnown = Boolean(sender)
+  const matched =
+    sender?.customer_id ??
+    matchCustomer(from, (customers ?? []) as { id: string; phone: string | null }[])
 
   const { error } = await supabase.from('sms_inbox').insert({
     from_number: from || null,
     raw_text: text,
     parsed,
     matched_customer: matched,
+    sender_known: senderKnown,
     status: 'pending',
   })
   if (error) return json({ error: error.message }, 500)
 
-  return json({ ok: true, parsed_items: parsed.length, matched_customer: matched })
+  return json({ ok: true, parsed_items: parsed.length, matched_customer: matched, sender_known: senderKnown })
 })
 
 // --- helpers ---------------------------------------------------------------
@@ -104,16 +119,19 @@ function norm(s: string): string {
   return s.toUpperCase().replace(/[^A-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
+// Last 10 digits of a phone number (so +63 / 0 prefixes don't matter); '' if too short.
+function digitsTail(s: string): string {
+  const d = (s || '').replace(/\D/g, '')
+  return d.length >= 7 ? d.slice(-10) : ''
+}
+
 function matchCustomer(
   from: string,
   customers: { id: string; phone: string | null }[],
 ): string | null {
-  const digits = (from || '').replace(/\D/g, '')
-  if (digits.length < 7) return null
-  const tail = digits.slice(-10)
-  const hit = customers.find(
-    (c) => c.phone && c.phone.replace(/\D/g, '').slice(-10) === tail,
-  )
+  const tail = digitsTail(from)
+  if (!tail) return null
+  const hit = customers.find((c) => c.phone && digitsTail(c.phone) === tail)
   return hit?.id ?? null
 }
 

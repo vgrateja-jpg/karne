@@ -22,6 +22,10 @@ is a free phone app using her existing SIM (no Twilio / no per-SMS fees).
 Choose any long random string (this stops strangers from posting fake orders). Example:
 `karne_7f3k9Qd2zP8w`. You'll use it in two places below.
 
+> Prereq: make sure migrations `0001`–`0005` are applied (0005 adds the senders
+> registry). If you're updating an already-deployed function, just re-deploy it
+> with the current `index.ts`.
+
 ## 2. Deploy the Edge Function
 
 **Option A — Supabase CLI**
@@ -81,6 +85,8 @@ Send yourself a test text to confirm it lands in the **Inbox**.
 - The parser is **best-effort** — it matches product names and the aliases you add (Products →
   each product can have spelling variants like `bulalo`, `balat`). Anything it can't match shows
   up for you to fix before confirming. Nothing is ever auto-posted as a final order.
-- Add **aliases** for the words customers actually text, and set each customer's **phone** so the
-  inbox auto-selects them.
+- Add **aliases** for the words customers actually text (Products → each product's variants).
+- **Register order senders** in the app: **Settings → SMS order senders** (phone → customer).
+  Texts from registered numbers auto-pick the customer; texts from unregistered numbers still
+  appear in the Inbox flagged **“unknown sender”**, with a one-tap **Register this number** button.
 - To revoke access, change `SMS_WEBHOOK_SECRET` (and update the forwarder app).

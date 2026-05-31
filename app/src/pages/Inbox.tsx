@@ -18,6 +18,7 @@ interface SmsRow {
   raw_text: string
   parsed: ParsedItem[] | null
   matched_customer: string | null
+  sender_known: boolean
 }
 
 export function Inbox() {
@@ -121,6 +122,16 @@ function InboxItem({
   )
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [registered, setRegistered] = useState(false)
+
+  async function registerSender() {
+    if (!row.from_number) return
+    const { error } = await supabase
+      .from('sms_senders')
+      .insert({ phone: row.from_number, customer_id: customerId || null })
+    if (error) setError(error.message)
+    else setRegistered(true)
+  }
 
   function setLine(key: number, patch: Partial<Line>) {
     setLines((prev) => prev.map((l) => (l.key === key ? { ...l, ...patch } : l)))
@@ -179,7 +190,26 @@ function InboxItem({
     <Card>
       <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
         <div>
-          <div className="text-xs uppercase text-slate-500">From {row.from_number ?? 'unknown'}</div>
+          <div className="mb-1 flex flex-wrap items-center gap-2">
+            <span className="text-xs uppercase text-slate-500">From {row.from_number ?? 'unknown'}</span>
+            {!row.sender_known &&
+              (registered ? (
+                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                  ✓ number registered
+                </span>
+              ) : (
+                <>
+                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                    ⚠ unknown sender
+                  </span>
+                  {row.from_number && (
+                    <button onClick={registerSender} className="text-xs font-medium text-rose-700 hover:underline">
+                      Register this number
+                    </button>
+                  )}
+                </>
+              ))}
+          </div>
           <div className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">“{row.raw_text}”</div>
         </div>
         <div className="text-xs text-slate-400">{new Date(row.received_at).toLocaleString()}</div>
