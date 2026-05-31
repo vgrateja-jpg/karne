@@ -1,0 +1,255 @@
+import { useEffect, useState } from 'react'
+import { supabase } from '../lib/supabase'
+import type { CattlePurchase, Purchase, Supplier } from '../lib/types'
+import { money, qty as fmtQty, today } from '../lib/format'
+import { Banner, Button, Card, Field, Input, PageHeader, Select } from '../components/ui'
+
+export function Purchases() {
+  const [suppliers, setSuppliers] = useState<Supplier[]>([])
+  const [cattle, setCattle] = useState<CattlePurchase[]>([])
+  const [other, setOther] = useState<Purchase[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  // new supplier
+  const [supName, setSupName] = useState('')
+
+  // cattle form
+  const [cTag, setCTag] = useState('')
+  const [cSup, setCSup] = useState('')
+  const [cDate, setCDate] = useState(today())
+  const [cWeight, setCWeight] = useState<number | ''>('')
+  const [cPrice, setCPrice] = useState<number | ''>('')
+
+  // other purchase form
+  const [oSup, setOSup] = useState('')
+  const [oDate, setODate] = useState(today())
+  const [oDesc, setODesc] = useState('')
+  const [oCost, setOCost] = useState<number | ''>('')
+
+  async function load() {
+    setLoading(true)
+    const [s, c, o] = await Promise.all([
+      supabase.from('suppliers').select('*').eq('is_active', true).order('name'),
+      supabase.from('cattle_purchases').select('*').order('purchased_on', { ascending: false }).limit(100),
+      supabase.from('purchases').select('*').order('purchased_on', { ascending: false }).limit(100),
+    ])
+    if (s.error) setError(s.error.message)
+    else setSuppliers((s.data ?? []) as Supplier[])
+    if (c.data) setCattle(c.data as CattlePurchase[])
+    if (o.data) setOther(o.data as Purchase[])
+    setLoading(false)
+  }
+  useEffect(() => {
+    load()
+  }, [])
+
+  const supName_ = (id: string | null) => suppliers.find((s) => s.id === id)?.name ?? '—'
+
+  async function addSupplier() {
+    if (!supName.trim()) return
+    setBusy(true)
+    const { error } = await supabase.from('suppliers').insert({ name: supName.trim() })
+    setBusy(false)
+    if (error) setError(error.message)
+    else {
+      setSupName('')
+      load()
+    }
+  }
+
+  async function addCattle() {
+    setError(null)
+    if (cWeight === '' || cPrice === '') {
+      setError('Enter weight and price per kg.')
+      return
+    }
+    setBusy(true)
+    const { error } = await supabase.from('cattle_purchases').insert({
+      tag: cTag.trim() || null,
+      supplier_id: cSup || null,
+      purchased_on: cDate,
+      weight_kg: Number(cWeight),
+      price_per_kg: Number(cPrice),
+    })
+    setBusy(false)
+    if (error) setError(error.message)
+    else {
+      setCTag('')
+      setCWeight('')
+      setCPrice('')
+      load()
+    }
+  }
+
+  async function addOther() {
+    setError(null)
+    if (oCost === '' || Number(oCost) <= 0) {
+      setError('Enter a cost.')
+      return
+    }
+    setBusy(true)
+    const { error } = await supabase.from('purchases').insert({
+      supplier_id: oSup || null,
+      purchased_on: oDate,
+      description: oDesc.trim() || null,
+      total_cost: Number(oCost),
+    })
+    setBusy(false)
+    if (error) setError(error.message)
+    else {
+      setODesc('')
+      setOCost('')
+      load()
+    }
+  }
+
+  const month = today().slice(0, 7)
+  const inMonth = (d: string) => d.slice(0, 7) === month
+  const cattleTotal = cWeight !== '' && cPrice !== '' ? Number(cWeight) * Number(cPrice) : 0
+  const monthSpend =
+    cattle.filter((c) => inMonth(c.purchased_on)).reduce((s, c) => s + Number(c.total_cost), 0) +
+    other.filter((o) => inMonth(o.purchased_on)).reduce((s, o) => s + Number(o.total_cost), 0)
+
+  return (
+    <div>
+      <PageHeader
+        title="Purchases (supply)"
+        action={
+          <div className="text-right">
+            <div className="text-xs uppercase text-slate-500">Bought this month</div>
+            <div className="text-xl font-semibold tabular-nums text-slate-900">{money(monthSpend)}</div>
+          </div>
+        }
+      />
+      {error && (
+        <div className="mb-3">
+          <Banner kind="error">{error}</Banner>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {/* cattle */}
+        <Card>
+          <div className="mb-2 text-sm font-medium text-slate-700">Cattle bought (live, weight × price)</div>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Tag / name">
+              <Input value={cTag} onChange={(e) => setCTag(e.target.value)} placeholder="optional" />
+            </Field>
+            <Field label="Supplier">
+              <Select value={cSup} onChange={(e) => setCSup(e.target.value)}>
+                <option value="">— none —</option>
+                {suppliers.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Weight (kg)">
+              <Input type="number" step="0.001" min="0" value={cWeight} onChange={(e) => setCWeight(e.target.value === '' ? '' : Number(e.target.value))} />
+            </Field>
+            <Field label="Price / kg">
+              <Input type="number" step="0.01" min="0" value={cPrice} onChange={(e) => setCPrice(e.target.value === '' ? '' : Number(e.target.value))} />
+            </Field>
+            <Field label="Date">
+              <Input type="date" value={cDate} onChange={(e) => setCDate(e.target.value)} />
+            </Field>
+            <div className="flex flex-col justify-end">
+              <span className="mb-1 block text-xs font-medium text-slate-600">Total</span>
+              <div className="rounded-lg bg-slate-50 px-3 py-2 text-sm font-semibold tabular-nums">{money(cattleTotal)}</div>
+            </div>
+          </div>
+          <div className="mt-3">
+            <Button onClick={addCattle} disabled={busy}>
+              + Add cattle
+            </Button>
+          </div>
+        </Card>
+
+        {/* other purchases */}
+        <Card>
+          <div className="mb-2 text-sm font-medium text-slate-700">Other stock / supplier purchases</div>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Supplier">
+              <Select value={oSup} onChange={(e) => setOSup(e.target.value)}>
+                <option value="">— none —</option>
+                {suppliers.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Date">
+              <Input type="date" value={oDate} onChange={(e) => setODate(e.target.value)} />
+            </Field>
+            <Field label="Description">
+              <Input value={oDesc} onChange={(e) => setODesc(e.target.value)} placeholder="e.g. pork, chicken delivery" />
+            </Field>
+            <Field label="Total cost">
+              <Input type="number" step="0.01" min="0" value={oCost} onChange={(e) => setOCost(e.target.value === '' ? '' : Number(e.target.value))} />
+            </Field>
+          </div>
+          <div className="mt-3 flex flex-wrap items-end gap-2">
+            <Button onClick={addOther} disabled={busy}>
+              + Add purchase
+            </Button>
+            <div className="flex items-end gap-1">
+              <Input value={supName} onChange={(e) => setSupName(e.target.value)} placeholder="new supplier" className="w-40" />
+              <Button variant="ghost" onClick={addSupplier} disabled={busy || !supName.trim()}>
+                + Supplier
+              </Button>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      <Card className="mt-4">
+        <div className="mb-2 text-sm font-medium text-slate-700">Recent purchases</div>
+        {loading ? (
+          <div className="py-6 text-center text-slate-400">Loading…</div>
+        ) : cattle.length === 0 && other.length === 0 ? (
+          <div className="py-6 text-center text-sm text-slate-400">Nothing recorded yet.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500">
+                  <th className="py-2 pr-3">Date</th>
+                  <th className="py-2 pr-3">What</th>
+                  <th className="py-2 pr-3">Supplier</th>
+                  <th className="py-2 pr-3 text-right">Cost</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cattle.map((c) => (
+                  <tr key={c.id} className="border-b border-slate-100 last:border-0">
+                    <td className="py-2 pr-3 tabular-nums text-slate-500">{c.purchased_on}</td>
+                    <td className="py-2 pr-3 text-slate-800">
+                      🐄 Cattle{c.tag ? ` (${c.tag})` : ''}{' '}
+                      <span className="text-slate-400">
+                        {c.weight_kg ? `${fmtQty(c.weight_kg)}kg × ${money(c.price_per_kg)}` : ''}
+                      </span>
+                    </td>
+                    <td className="py-2 pr-3 text-slate-500">{supName_(c.supplier_id)}</td>
+                    <td className="py-2 pr-3 text-right tabular-nums">{money(c.total_cost)}</td>
+                  </tr>
+                ))}
+                {other.map((o) => (
+                  <tr key={o.id} className="border-b border-slate-100 last:border-0">
+                    <td className="py-2 pr-3 tabular-nums text-slate-500">{o.purchased_on}</td>
+                    <td className="py-2 pr-3 text-slate-800">{o.description ?? 'Purchase'}</td>
+                    <td className="py-2 pr-3 text-slate-500">{supName_(o.supplier_id)}</td>
+                    <td className="py-2 pr-3 text-right tabular-nums">{money(o.total_cost)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+    </div>
+  )
+}

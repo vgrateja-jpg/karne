@@ -79,3 +79,70 @@ export interface OrderLineDraft {
   unit_price: number
   notes?: string | null
 }
+
+export type AccountType = 'cash' | 'bank' | 'gcash' | 'coop' | 'check'
+
+export interface BankAccount {
+  id: string
+  name: string
+  type: AccountType
+  opening_balance: number
+  is_active: boolean
+}
+
+export interface AccountBalance {
+  account_id: string
+  name: string
+  type: AccountType
+  opening_balance: number
+  balance: number
+  is_active: boolean
+}
+
+export interface BankTxn {
+  id: string
+  bank_account_id: string
+  txn_on: string
+  amount: number
+  type: 'deposit' | 'withdrawal' | 'transfer'
+  reference: string | null
+  notes: string | null
+}
+
+export interface Expense {
+  id: string
+  spent_on: string
+  category: string | null
+  payee: string | null
+  amount: number
+  bank_account_id: string | null
+  notes: string | null
+}
+
+export interface Supplier {
+  id: string
+  name: string
+  phone: string | null
+  notes: string | null
+  is_active: boolean
+}
+
+export interface CattlePurchase {
+  id: string
+  tag: string | null
+  supplier_id: string | null
+  purchased_on: string
+  weight_kg: number | null
+  price_per_kg: number | null
+  total_cost: number
+  notes: string | null
+}
+
+export interface Purchase {
+  id: string
+  supplier_id: string | null
+  purchased_on: string
+  description: string | null
+  total_cost: number
+  notes: string | null
+}

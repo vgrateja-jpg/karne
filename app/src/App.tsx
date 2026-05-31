@@ -13,6 +13,9 @@ import { Month } from './pages/Month'
 import { Receipt } from './pages/Receipt'
 import { Settings } from './pages/Settings'
 import { Inbox } from './pages/Inbox'
+import { Expenses } from './pages/Expenses'
+import { Cash } from './pages/Cash'
+import { Purchases } from './pages/Purchases'
 
 export default function App() {
   return (
@@ -35,6 +38,9 @@ export default function App() {
         <Route path="/customers/:id" element={<CustomerStatement />} />
         <Route path="/products" element={<Products />} />
         <Route path="/inventory" element={<Inventory />} />
+        <Route path="/purchases" element={<Purchases />} />
+        <Route path="/expenses" element={<Expenses />} />
+        <Route path="/cash" element={<Cash />} />
         <Route path="/settings" element={<Settings />} />
       </Route>
     </Routes>

@@ -8,8 +8,11 @@ const nav = [
   { to: '/orders/new', label: 'New Order' },
   { to: '/orders', label: 'Orders' },
   { to: '/customers', label: 'Customers' },
-  { to: '/products', label: 'Products' },
   { to: '/inventory', label: 'Inventory' },
+  { to: '/purchases', label: 'Purchases' },
+  { to: '/expenses', label: 'Expenses' },
+  { to: '/cash', label: 'Cash' },
+  { to: '/products', label: 'Products' },
   { to: '/settings', label: 'Settings' },
 ]
 
