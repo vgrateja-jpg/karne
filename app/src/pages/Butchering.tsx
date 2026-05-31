@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import type { CattlePurchase, Product } from '../lib/types'
 import { qty as fmtQty, today } from '../lib/format'
@@ -22,6 +22,8 @@ export function Butchering() {
   const [cattle, setCattle] = useState<CattlePurchase[]>([])
   const [recent, setRecent] = useState<BreakdownRow[]>([])
   const [outputs, setOutputs] = useState<Record<string, number>>({}) // breakdown_id -> total kg
+  const [details, setDetails] = useState<Record<string, { name: string; weight_kg: number }[]>>({})
+  const [expanded, setExpanded] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [ok, setOk] = useState<string | null>(null)
@@ -49,13 +51,20 @@ export function Butchering() {
       if (rows.length) {
         const items = await supabase
           .from('breakdown_items')
-          .select('breakdown_id, weight_kg')
+          .select('breakdown_id, weight_kg, product:products(name)')
           .in('breakdown_id', rows.map((r) => r.id))
         const m: Record<string, number> = {}
-        for (const it of (items.data ?? []) as { breakdown_id: string; weight_kg: number }[]) {
+        const d: Record<string, { name: string; weight_kg: number }[]> = {}
+        for (const it of (items.data ?? []) as unknown as {
+          breakdown_id: string
+          weight_kg: number
+          product: { name: string } | null
+        }[]) {
           m[it.breakdown_id] = (m[it.breakdown_id] ?? 0) + Number(it.weight_kg)
+          ;(d[it.breakdown_id] ??= []).push({ name: it.product?.name ?? '—', weight_kg: Number(it.weight_kg) })
         }
         setOutputs(m)
+        setDetails(d)
       }
     }
     setLoading(false)
@@ -271,7 +280,10 @@ export function Butchering() {
       </Card>
 
       <Card className="mt-4">
-        <div className="mb-2 text-sm font-medium text-slate-700">Recent butchering</div>
+        <div className="mb-2 flex items-baseline justify-between">
+          <span className="text-sm font-medium text-slate-700">Recent butchering</span>
+          <span className="text-xs text-slate-400">tap a row to see the cuts</span>
+        </div>
         {loading ? (
           <div className="py-6 text-center text-slate-400">Loading…</div>
         ) : recent.length === 0 ? (
@@ -292,16 +304,47 @@ export function Butchering() {
                 {recent.map((r) => {
                   const out = outputs[r.id] ?? 0
                   const inW = Number(r.source_weight_kg ?? 0)
+                  const isOpen = expanded === r.id
+                  const cuts = details[r.id] ?? []
                   return (
-                    <tr key={r.id} className="border-b border-slate-100 last:border-0">
-                      <td className="py-2 pr-3 tabular-nums text-slate-500">{r.broke_down_on}</td>
-                      <td className="py-2 pr-3 font-medium text-slate-800">{r.source_label ?? '—'}</td>
-                      <td className="py-2 pr-3 text-right tabular-nums">{inW ? `${fmtQty(inW)} kg` : '—'}</td>
-                      <td className="py-2 pr-3 text-right tabular-nums">{fmtQty(out)} kg</td>
-                      <td className="py-2 pr-3 text-right tabular-nums text-slate-500">
-                        {inW > 0 ? `${((out / inW) * 100).toFixed(0)}%` : '—'}
-                      </td>
-                    </tr>
+                    <Fragment key={r.id}>
+                      <tr
+                        className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
+                        onClick={() => setExpanded(isOpen ? null : r.id)}
+                      >
+                        <td className="py-2 pr-3 tabular-nums text-slate-500">
+                          <span className="mr-1 inline-block text-slate-400">{isOpen ? '▾' : '▸'}</span>
+                          {r.broke_down_on}
+                        </td>
+                        <td className="py-2 pr-3 font-medium text-slate-800">{r.source_label ?? '—'}</td>
+                        <td className="py-2 pr-3 text-right tabular-nums">{inW ? `${fmtQty(inW)} kg` : '—'}</td>
+                        <td className="py-2 pr-3 text-right tabular-nums">{fmtQty(out)} kg</td>
+                        <td className="py-2 pr-3 text-right tabular-nums text-slate-500">
+                          {inW > 0 ? `${((out / inW) * 100).toFixed(0)}%` : '—'}
+                        </td>
+                      </tr>
+                      {isOpen && (
+                        <tr className="border-b border-slate-100">
+                          <td colSpan={5} className="bg-slate-50 px-3 py-2">
+                            <div className="mb-1 text-xs font-medium uppercase text-slate-400">Cuts from this animal</div>
+                            {cuts.length === 0 ? (
+                              <span className="text-xs text-slate-400">No cut details.</span>
+                            ) : (
+                              <div className="flex flex-wrap gap-2">
+                                {cuts.map((c, i) => (
+                                  <span
+                                    key={i}
+                                    className="rounded-full bg-white px-2.5 py-1 text-xs text-slate-700 ring-1 ring-slate-200"
+                                  >
+                                    {c.name} · <span className="font-medium tabular-nums">{fmtQty(c.weight_kg)} kg</span>
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
                   )
                 })}
               </tbody>
