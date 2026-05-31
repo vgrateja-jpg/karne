@@ -24,6 +24,14 @@ const groups: NavGroup[] = [
     ],
   },
   {
+    title: 'Stock',
+    items: [
+      { to: '/butchering', label: 'Butchering', icon: '🔪' },
+      { to: '/products', label: 'Prices', icon: '🏷️' },
+      { to: '/inventory', label: 'Stock', icon: '📦' },
+    ],
+  },
+  {
     title: 'People',
     items: [
       { to: '/customers', label: 'Customers', icon: '👥' },
@@ -37,14 +45,6 @@ const groups: NavGroup[] = [
       { to: '/expenses', label: 'Expenses', icon: '💸' },
       { to: '/checks', label: 'Cheques', icon: '💳' },
       { to: '/loans', label: 'Loans', icon: '🏦' },
-    ],
-  },
-  {
-    title: 'Stock',
-    items: [
-      { to: '/butchering', label: 'Butchering', icon: '🔪' },
-      { to: '/products', label: 'Prices', icon: '🏷️' },
-      { to: '/inventory', label: 'Stock', icon: '📦' },
     ],
   },
   {
