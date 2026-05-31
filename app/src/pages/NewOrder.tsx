@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import type { Customer, OrderChannel, Product } from '../lib/types'
+import type { Branch, Customer, OrderChannel, Product } from '../lib/types'
 import { money, qty as fmtQty, today } from '../lib/format'
 import { Banner, Button, Card, Field, Input, PageHeader, Select } from '../components/ui'
 
@@ -18,7 +18,9 @@ export function NewOrder() {
   const navigate = useNavigate()
   const [products, setProducts] = useState<Product[]>([])
   const [customers, setCustomers] = useState<Customer[]>([])
+  const [branches, setBranches] = useState<Branch[]>([])
   const [customerId, setCustomerId] = useState('')
+  const [branchId, setBranchId] = useState('')
   const [orderDate, setOrderDate] = useState(today())
   const [channel, setChannel] = useState<OrderChannel>('manual')
   const [notes, setNotes] = useState('')
@@ -30,9 +32,11 @@ export function NewOrder() {
     Promise.all([
       supabase.from('products').select('*').eq('is_active', true).order('sort_order').order('name'),
       supabase.from('customers').select('*').eq('is_active', true).order('name'),
-    ]).then(([p, c]) => {
+      supabase.from('branches').select('*').eq('is_active', true).order('name'),
+    ]).then(([p, c, b]) => {
       if (p.data) setProducts(p.data as Product[])
       if (c.data) setCustomers(c.data as Customer[])
+      if (b.data) setBranches(b.data as Branch[])
     })
   }, [])
 
@@ -80,9 +84,16 @@ export function NewOrder() {
         unit_price: Number(l.unit_price),
       })),
     })
+    if (error) {
+      setBusy(false)
+      setError(error.message)
+      return
+    }
+    if (branchId) {
+      await supabase.from('orders').update({ branch_id: branchId }).eq('id', data)
+    }
     setBusy(false)
-    if (error) setError(error.message)
-    else navigate(`/orders?new=${data}`)
+    navigate(`/orders?new=${data}`)
   }
 
   return (
@@ -120,6 +131,18 @@ export function NewOrder() {
           <Field label="Notes">
             <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="optional" />
           </Field>
+          {branches.length > 0 && (
+            <Field label="Branch">
+              <Select value={branchId} onChange={(e) => setBranchId(e.target.value)}>
+                <option value="">— (none) —</option>
+                {branches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          )}
         </div>
       </Card>
 

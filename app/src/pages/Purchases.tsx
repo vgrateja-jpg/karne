@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import type { CattlePurchase, Purchase, Supplier } from '../lib/types'
+import type { CattlePurchase, Purchase, Supplier, SupplierBalance } from '../lib/types'
 import { money, qty as fmtQty, today } from '../lib/format'
 import { Banner, Button, Card, Field, Input, PageHeader, Select } from '../components/ui'
 
 export function Purchases() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
+  const [balances, setBalances] = useState<SupplierBalance[]>([])
   const [cattle, setCattle] = useState<CattlePurchase[]>([])
   const [other, setOther] = useState<Purchase[]>([])
   const [loading, setLoading] = useState(true)
@@ -14,6 +15,13 @@ export function Purchases() {
 
   // new supplier
   const [supName, setSupName] = useState('')
+  const [supOpening, setSupOpening] = useState<number | ''>('')
+
+  // supplier payment
+  const [paySup, setPaySup] = useState('')
+  const [payAmt, setPayAmt] = useState<number | ''>('')
+  const payDate = today()
+  const [payMethod, setPayMethod] = useState('cash')
 
   // cattle form
   const [cTag, setCTag] = useState('')
@@ -30,13 +38,15 @@ export function Purchases() {
 
   async function load() {
     setLoading(true)
-    const [s, c, o] = await Promise.all([
+    const [s, b, c, o] = await Promise.all([
       supabase.from('suppliers').select('*').eq('is_active', true).order('name'),
+      supabase.from('v_supplier_balance').select('*').order('name'),
       supabase.from('cattle_purchases').select('*').order('purchased_on', { ascending: false }).limit(100),
       supabase.from('purchases').select('*').order('purchased_on', { ascending: false }).limit(100),
     ])
     if (s.error) setError(s.error.message)
     else setSuppliers((s.data ?? []) as Supplier[])
+    if (b.data) setBalances(b.data as SupplierBalance[])
     if (c.data) setCattle(c.data as CattlePurchase[])
     if (o.data) setOther(o.data as Purchase[])
     setLoading(false)
@@ -50,11 +60,32 @@ export function Purchases() {
   async function addSupplier() {
     if (!supName.trim()) return
     setBusy(true)
-    const { error } = await supabase.from('suppliers').insert({ name: supName.trim() })
+    const { error } = await supabase
+      .from('suppliers')
+      .insert({ name: supName.trim(), opening_balance: supOpening === '' ? 0 : Number(supOpening) })
     setBusy(false)
     if (error) setError(error.message)
     else {
       setSupName('')
+      setSupOpening('')
+      load()
+    }
+  }
+
+  async function paySupplier() {
+    setError(null)
+    if (!paySup || payAmt === '' || Number(payAmt) <= 0) {
+      setError('Pick a supplier and an amount.')
+      return
+    }
+    setBusy(true)
+    const { error } = await supabase
+      .from('supplier_payments')
+      .insert({ supplier_id: paySup, amount: Number(payAmt), paid_on: payDate, method: payMethod })
+    setBusy(false)
+    if (error) setError(error.message)
+    else {
+      setPayAmt('')
       load()
     }
   }
@@ -90,12 +121,9 @@ export function Purchases() {
       return
     }
     setBusy(true)
-    const { error } = await supabase.from('purchases').insert({
-      supplier_id: oSup || null,
-      purchased_on: oDate,
-      description: oDesc.trim() || null,
-      total_cost: Number(oCost),
-    })
+    const { error } = await supabase
+      .from('purchases')
+      .insert({ supplier_id: oSup || null, purchased_on: oDate, description: oDesc.trim() || null, total_cost: Number(oCost) })
     setBusy(false)
     if (error) setError(error.message)
     else {
@@ -111,11 +139,12 @@ export function Purchases() {
   const monthSpend =
     cattle.filter((c) => inMonth(c.purchased_on)).reduce((s, c) => s + Number(c.total_cost), 0) +
     other.filter((o) => inMonth(o.purchased_on)).reduce((s, o) => s + Number(o.total_cost), 0)
+  const totalPayable = balances.filter((b) => b.balance > 0).reduce((s, b) => s + b.balance, 0)
 
   return (
     <div>
       <PageHeader
-        title="Purchases (supply)"
+        title="Purchases & suppliers"
         action={
           <div className="text-right">
             <div className="text-xs uppercase text-slate-500">Bought this month</div>
@@ -128,6 +157,80 @@ export function Purchases() {
           <Banner kind="error">{error}</Banner>
         </div>
       )}
+
+      {/* Supplier accounts / payables */}
+      <Card className="mb-4">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-sm font-medium text-slate-700">Supplier accounts (what you owe)</span>
+          <span className="text-sm text-slate-500">
+            Total payable:{' '}
+            <span className="font-semibold tabular-nums text-rose-600">{money(totalPayable)}</span>
+          </span>
+        </div>
+        {balances.length > 0 && (
+          <div className="mb-3 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500">
+                  <th className="py-2 pr-3">Supplier</th>
+                  <th className="py-2 pr-3 text-right">Balance owed</th>
+                </tr>
+              </thead>
+              <tbody>
+                {balances.map((b) => (
+                  <tr key={b.supplier_id} className="border-b border-slate-100 last:border-0">
+                    <td className="py-2 pr-3 font-medium text-slate-800">{b.name}</td>
+                    <td className={`py-2 pr-3 text-right tabular-nums ${b.balance > 0 ? 'text-rose-600' : 'text-slate-700'}`}>
+                      {money(b.balance)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <div className="grid grid-cols-1 gap-3 border-t border-slate-100 pt-3 sm:grid-cols-2">
+          {/* record payment */}
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:items-end">
+            <Field label="Pay supplier">
+              <Select value={paySup} onChange={(e) => setPaySup(e.target.value)}>
+                <option value="">— pick —</option>
+                {suppliers.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Amount">
+              <Input type="number" step="0.01" min="0" value={payAmt} onChange={(e) => setPayAmt(e.target.value === '' ? '' : Number(e.target.value))} />
+            </Field>
+            <Field label="Method">
+              <Select value={payMethod} onChange={(e) => setPayMethod(e.target.value)}>
+                <option value="cash">Cash</option>
+                <option value="bank">Bank</option>
+                <option value="gcash">GCash</option>
+                <option value="check">Check</option>
+              </Select>
+            </Field>
+            <Button onClick={paySupplier} disabled={busy}>
+              Pay
+            </Button>
+          </div>
+          {/* add supplier */}
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+            <Field label="New supplier">
+              <Input value={supName} onChange={(e) => setSupName(e.target.value)} placeholder="name" />
+            </Field>
+            <Field label="Opening owed">
+              <Input type="number" step="0.01" value={supOpening} onChange={(e) => setSupOpening(e.target.value === '' ? '' : Number(e.target.value))} />
+            </Field>
+            <Button variant="ghost" onClick={addSupplier} disabled={busy || !supName.trim()}>
+              + Add
+            </Button>
+          </div>
+        </div>
+      </Card>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* cattle */}
@@ -192,16 +295,10 @@ export function Purchases() {
               <Input type="number" step="0.01" min="0" value={oCost} onChange={(e) => setOCost(e.target.value === '' ? '' : Number(e.target.value))} />
             </Field>
           </div>
-          <div className="mt-3 flex flex-wrap items-end gap-2">
+          <div className="mt-3">
             <Button onClick={addOther} disabled={busy}>
               + Add purchase
             </Button>
-            <div className="flex items-end gap-1">
-              <Input value={supName} onChange={(e) => setSupName(e.target.value)} placeholder="new supplier" className="w-40" />
-              <Button variant="ghost" onClick={addSupplier} disabled={busy || !supName.trim()}>
-                + Supplier
-              </Button>
-            </div>
           </div>
         </Card>
       </div>

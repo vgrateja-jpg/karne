@@ -12,6 +12,8 @@ const nav = [
   { to: '/purchases', label: 'Purchases' },
   { to: '/expenses', label: 'Expenses' },
   { to: '/cash', label: 'Cash' },
+  { to: '/checks', label: 'Cheques' },
+  { to: '/loans', label: 'Loans' },
   { to: '/products', label: 'Products' },
   { to: '/settings', label: 'Settings' },
 ]

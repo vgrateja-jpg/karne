@@ -4,7 +4,7 @@
 --  cattle_purchases tables already exist from 0001 — this just adds a balance
 --  view for the Cash & Banks screen.)
 -- ============================================================================
-create view public.v_account_balance
+create or replace view public.v_account_balance
   with (security_invoker = true) as
 select a.id   as account_id,
        a.name,

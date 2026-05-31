@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { Banner, Button, Card, Field, Input, PageHeader } from '../components/ui'
 import { SmsSenders } from '../components/SmsSenders'
+import { Branches } from '../components/Branches'
 
 export function Settings() {
   const [form, setForm] = useState({ business_name: '', address: '', phone: '', receipt_footer: '' })
@@ -86,6 +87,9 @@ export function Settings() {
 
       <div className="mt-4 max-w-3xl">
         <SmsSenders />
+      </div>
+      <div className="mt-4 max-w-3xl">
+        <Branches />
       </div>
     </div>
   )

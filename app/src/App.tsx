@@ -16,6 +16,8 @@ import { Inbox } from './pages/Inbox'
 import { Expenses } from './pages/Expenses'
 import { Cash } from './pages/Cash'
 import { Purchases } from './pages/Purchases'
+import { Loans } from './pages/Loans'
+import { Checks } from './pages/Checks'
 
 export default function App() {
   return (
@@ -41,6 +43,8 @@ export default function App() {
         <Route path="/purchases" element={<Purchases />} />
         <Route path="/expenses" element={<Expenses />} />
         <Route path="/cash" element={<Cash />} />
+        <Route path="/loans" element={<Loans />} />
+        <Route path="/checks" element={<Checks />} />
         <Route path="/settings" element={<Settings />} />
       </Route>
     </Routes>

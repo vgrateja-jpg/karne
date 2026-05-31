@@ -100,7 +100,11 @@ configured yet" note. To use it for real:
 - **Settings** — business name / address / phone / receipt footer for the printouts
 - **SMS Inbox** — forwarded texts are parsed into draft orders; review, fix, and confirm into a
   real order in one tap (setup in `SMS_SETUP.md`)
-- **Dashboard** — sales today + total receivables
+- **Purchases** — cattle bought (weight × price) + supplier purchases; tracks her supply cost
+- **Expenses** — log salaries, diesel, utilities, etc.; running monthly total
+- **Cash & Banks** — every account's balance, deposits/withdrawals/transfers, total cash on hand
+- **Dashboard** — sales today, receivables, cash on hand, and this-month sales / purchases /
+  expenses / rough profit
 
 ## Next
 

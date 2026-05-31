@@ -26,6 +26,7 @@ export function Dashboard() {
     receivables: 0,
     owing: 0,
     cashOnHand: 0,
+    payables: 0,
     salesMonth: 0,
     expensesMonth: 0,
     purchasesMonth: 0,
@@ -38,7 +39,7 @@ export function Dashboard() {
       const now = new Date()
       const { from, to } = monthRange(now.getFullYear(), now.getMonth())
 
-      const [ordersRes, balRes, acctRes, dailyRes, expRes, cattleRes, purchRes] = await Promise.all([
+      const [ordersRes, balRes, acctRes, dailyRes, expRes, cattleRes, purchRes, supRes] = await Promise.all([
         supabase.from('orders').select('id').eq('order_date', d),
         supabase.from('v_customer_balance').select('customer_id,balance'),
         supabase.from('v_account_balance').select('balance'),
@@ -46,6 +47,7 @@ export function Dashboard() {
         supabase.from('expenses').select('amount').gte('spent_on', from).lte('spent_on', to),
         supabase.from('cattle_purchases').select('total_cost').gte('purchased_on', from).lte('purchased_on', to),
         supabase.from('purchases').select('total_cost').gte('purchased_on', from).lte('purchased_on', to),
+        supabase.from('v_supplier_balance').select('balance'),
       ])
       if (ordersRes.error) setError(ordersRes.error.message)
 
@@ -68,12 +70,17 @@ export function Dashboard() {
         ((cattleRes.data ?? []) as { total_cost: number }[]).reduce((s, r) => s + Number(r.total_cost), 0) +
         ((purchRes.data ?? []) as { total_cost: number }[]).reduce((s, r) => s + Number(r.total_cost), 0)
 
+      const payables = ((supRes.data ?? []) as { balance: number }[])
+        .filter((b) => b.balance > 0)
+        .reduce((s, b) => s + Number(b.balance), 0)
+
       setM({
         salesToday,
         ordersToday: todayIds.length,
         receivables: positive.reduce((s, b) => s + b.balance, 0),
         owing: positive.length,
         cashOnHand,
+        payables,
         salesMonth,
         expensesMonth,
         purchasesMonth,
@@ -102,9 +109,10 @@ export function Dashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Sales today" value={v(m.salesToday)} sub={`${m.ordersToday} order(s) today`} />
-        <Stat label="Total receivables" value={v(m.receivables)} sub={`${m.owing} customer(s) owing`} tone="bad" />
+        <Stat label="Receivables" value={v(m.receivables)} sub={`${m.owing} owing you`} tone="bad" />
+        <Stat label="Payables" value={v(m.payables)} sub="owed to suppliers" tone="bad" />
         <Stat label="Cash on hand" value={v(m.cashOnHand)} sub="across all accounts" />
       </div>
 

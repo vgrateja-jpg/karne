@@ -146,3 +146,58 @@ export interface Purchase {
   total_cost: number
   notes: string | null
 }
+
+export interface SupplierBalance {
+  supplier_id: string
+  name: string
+  opening_balance: number
+  balance: number
+}
+
+export type LoanDirection = 'payable' | 'receivable'
+
+export interface Loan {
+  id: string
+  party_name: string
+  direction: LoanDirection
+  notes: string | null
+  is_active: boolean
+}
+
+export interface LoanBalance {
+  loan_id: string
+  party_name: string
+  direction: LoanDirection
+  balance: number
+}
+
+export interface LoanTxn {
+  id: string
+  loan_id: string
+  txn_on: string
+  type: 'principal' | 'interest' | 'payment' | 'adjustment'
+  amount: number
+  notes: string | null
+}
+
+export type CheckStatus = 'pending' | 'deposited' | 'cleared' | 'bounced' | 'cancelled'
+
+export interface Check {
+  id: string
+  direction: 'received' | 'issued'
+  party: string | null
+  bank: string | null
+  check_no: string | null
+  amount: number
+  check_date: string | null
+  due_date: string | null
+  status: CheckStatus
+  account_id: string | null
+  notes: string | null
+}
+
+export interface Branch {
+  id: string
+  name: string
+  is_active: boolean
+}
