@@ -33,7 +33,7 @@ const groups: NavGroup[] = [
   {
     title: 'Money',
     items: [
-      { to: '/cash', label: 'Cash & banks', icon: '💵' },
+      { to: '/cash', label: 'Cash & Banks', icon: '💵' },
       { to: '/expenses', label: 'Expenses', icon: '💸' },
       { to: '/checks', label: 'Cheques', icon: '💳' },
       { to: '/loans', label: 'Loans', icon: '🏦' },
@@ -50,7 +50,7 @@ const groups: NavGroup[] = [
   {
     title: 'Reports & setup',
     items: [
-      { to: '/month', label: 'Monthly report', icon: '📊' },
+      { to: '/month', label: 'Monthly Report', icon: '📊' },
       { to: '/settings', label: 'Settings', icon: '⚙️' },
     ],
   },

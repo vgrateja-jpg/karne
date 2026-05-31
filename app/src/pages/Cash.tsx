@@ -117,7 +117,7 @@ export function Cash() {
   return (
     <div>
       <PageHeader
-        title="Cash & banks"
+        title="Cash & Banks"
         action={
           <div className="text-right">
             <div className="text-xs uppercase text-slate-500">Total across accounts</div>

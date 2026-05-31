@@ -75,7 +75,7 @@ export function Month() {
   return (
     <div>
       <PageHeader
-        title="Monthly view"
+        title="Monthly Report"
         action={
           <div className="no-print flex items-center gap-2">
             <Button variant="ghost" onClick={() => shift(-1)}>

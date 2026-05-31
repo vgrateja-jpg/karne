@@ -13,9 +13,9 @@ Tip: on a phone, use the browser menu → *Add to Home screen* so it opens like 
 There's a menu on the left (tap **☰** on a phone). It's grouped so things are easy to find:
 - **Daily** — Home, New order, Text orders, Orders
 - **People** — Customers, Suppliers
-- **Money** — Cash & banks, Expenses, Cheques, Loans
+- **Money** — Cash & Banks, Expenses, Cheques, Loans
 - **Stock** — Stock, Prices
-- **Reports & setup** — Monthly report, Settings
+- **Reports & setup** — Monthly Report, Settings
 
 ---
 
@@ -43,7 +43,7 @@ When a customer texts an order, it shows up under **Text orders**.
   payments to them here too.
 
 ## Money
-- **Cash & banks** — every account's balance; record deposits, withdrawals, and transfers.
+- **Cash & Banks** — every account's balance; record deposits, withdrawals, and transfers.
 - **Expenses** — log salaries, diesel, utilities, etc.
 - **Cheques** — list cheques in/out with due dates; mark them deposited/cleared.
 - **Loans** — money you borrowed or lent, with running balances.
@@ -58,7 +58,7 @@ When a customer texts an order, it shows up under **Text orders**.
   (past receipts keep the price they were sold at).
 
 ## Reports & setup
-- **Monthly report** — the whole month at a glance: each day's sales, by product, by customer.
+- **Monthly Report** — the whole month at a glance: each day's sales, by product, by customer.
   Use **‹ Prev / Next ›** to change month and **🖨 Print** for paper.
 - **Home** — today's sales, money owed to you, money you owe, and cash on hand.
 - **Settings** — your shop name/address (for receipts), text-order senders, and branches.

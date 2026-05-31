@@ -73,6 +73,38 @@ export function Butchering() {
     load()
   }, [])
 
+  async function deleteBreakdown(id: string) {
+    if (!window.confirm('Delete this butchering record? Its cuts will be removed from stock.')) return
+    setError(null)
+    // reverse the stock this breakdown added (insert offsetting adjustments)
+    const items = await supabase.from('breakdown_items').select('product_id, weight_kg').eq('breakdown_id', id)
+    if (items.error) {
+      setError(items.error.message)
+      return
+    }
+    const movs = (items.data ?? []).map((it: { product_id: string; weight_kg: number }) => ({
+      product_id: it.product_id,
+      moved_on: today(),
+      type: 'adjustment',
+      quantity: -Number(it.weight_kg),
+      reference: 'breakdown removed',
+    }))
+    if (movs.length) {
+      const ins = await supabase.from('inventory_movements').insert(movs)
+      if (ins.error) {
+        setError(ins.error.message)
+        return
+      }
+    }
+    const del = await supabase.from('breakdowns').delete().eq('id', id)
+    if (del.error) {
+      setError(del.error.message)
+      return
+    }
+    if (expanded === id) setExpanded(null)
+    load()
+  }
+
   function setLine(key: number, patch: Partial<CutLine>) {
     setLines((prev) => prev.map((l) => (l.key === key ? { ...l, ...patch } : l)))
   }
@@ -298,6 +330,7 @@ export function Butchering() {
                   <th className="py-2 pr-3 text-right">Weight in</th>
                   <th className="py-2 pr-3 text-right">Cuts out</th>
                   <th className="py-2 pr-3 text-right">Yield</th>
+                  <th className="py-2 w-10"></th>
                 </tr>
               </thead>
               <tbody>
@@ -322,10 +355,22 @@ export function Butchering() {
                         <td className="py-2 pr-3 text-right tabular-nums text-slate-500">
                           {inW > 0 ? `${((out / inW) * 100).toFixed(0)}%` : '—'}
                         </td>
+                        <td className="py-2 text-right">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              deleteBreakdown(r.id)
+                            }}
+                            className="text-slate-400 hover:text-red-600"
+                            title="Delete this butchering"
+                          >
+                            ✕
+                          </button>
+                        </td>
                       </tr>
                       {isOpen && (
                         <tr className="border-b border-slate-100">
-                          <td colSpan={5} className="bg-slate-50 px-3 py-2">
+                          <td colSpan={6} className="bg-slate-50 px-3 py-2">
                             <div className="mb-1 text-xs font-medium uppercase text-slate-400">Cuts from this animal</div>
                             {cuts.length === 0 ? (
                               <span className="text-xs text-slate-400">No cut details.</span>
