@@ -1,7 +1,8 @@
 // Row shapes mirroring the database (see supabase/migrations/0001_initial_schema.sql).
 
 export type Category = 'beef' | 'pork' | 'chicken' | 'seafood' | 'processed' | 'other'
-export type Unit = 'kg' | 'pc' | 'box' | 'pack'
+// Free text so she can use any unit; common ones are offered as suggestions.
+export type Unit = string
 
 export interface Product {
   id: string

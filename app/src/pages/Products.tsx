@@ -5,7 +5,7 @@ import { money } from '../lib/format'
 import { Banner, Button, Card, Field, Input, PageHeader, Select } from '../components/ui'
 
 const CATEGORIES: Category[] = ['beef', 'pork', 'chicken', 'seafood', 'processed', 'other']
-const UNITS: Unit[] = ['kg', 'pc', 'box', 'pack']
+const UNIT_SUGGESTIONS = ['kg', 'g', 'lb', 'pc', 'box', 'pack', 'tray']
 
 const blank = {
   id: '',
@@ -89,16 +89,17 @@ export function Products() {
               </Select>
             </Field>
             <Field label="Unit">
-              <Select
+              <Input
+                list="unit-suggestions"
                 value={editing.unit}
-                onChange={(e) => setEditing({ ...editing, unit: e.target.value as Unit })}
-              >
-                {UNITS.map((u) => (
-                  <option key={u} value={u}>
-                    {u}
-                  </option>
+                onChange={(e) => setEditing({ ...editing, unit: e.target.value })}
+                placeholder="kg"
+              />
+              <datalist id="unit-suggestions">
+                {UNIT_SUGGESTIONS.map((u) => (
+                  <option key={u} value={u} />
                 ))}
-              </Select>
+              </datalist>
             </Field>
             <Field label="Price (₱ per unit)">
               <Input

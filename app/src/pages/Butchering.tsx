@@ -6,7 +6,7 @@ import { Banner, Button, Card, Field, Input, PageHeader, Select } from '../compo
 
 interface CutLine {
   key: number
-  product_id: string
+  name: string
   weight_kg: number
 }
 interface BreakdownRow {
@@ -31,7 +31,7 @@ export function Butchering() {
   const [sourceWeight, setSourceWeight] = useState<number | ''>('')
   const [cattleId, setCattleId] = useState('')
   const [date, setDate] = useState(today())
-  const [lines, setLines] = useState<CutLine[]>([{ key: seq++, product_id: '', weight_kg: 0 }])
+  const [lines, setLines] = useState<CutLine[]>([{ key: seq++, name: '', weight_kg: 0 }])
 
   async function load() {
     setLoading(true)
@@ -68,7 +68,7 @@ export function Butchering() {
     setLines((prev) => prev.map((l) => (l.key === key ? { ...l, ...patch } : l)))
   }
   function addLine() {
-    setLines((prev) => [...prev, { key: seq++, product_id: '', weight_kg: 0 }])
+    setLines((prev) => [...prev, { key: seq++, name: '', weight_kg: 0 }])
   }
   function removeLine(key: number) {
     setLines((prev) => (prev.length === 1 ? prev : prev.filter((l) => l.key !== key)))
@@ -82,7 +82,7 @@ export function Butchering() {
     }
   }
 
-  const valid = lines.filter((l) => l.product_id && Number(l.weight_kg) > 0)
+  const valid = lines.filter((l) => l.name.trim() && Number(l.weight_kg) > 0)
   const outputTotal = valid.reduce((s, l) => s + Number(l.weight_kg), 0)
   const inWeight = sourceWeight === '' ? 0 : Number(sourceWeight)
   const diff = inWeight - outputTotal
@@ -96,19 +96,42 @@ export function Butchering() {
       return
     }
     setBusy(true)
+    // Resolve each cut name to a product, creating it (price 0, kg) if it's new
+    // — so new cuts automatically appear in the price list for her to price.
+    const byName = new Map(products.map((p) => [p.name.trim().toLowerCase(), p.id]))
+    const items: { product_id: string; weight_kg: number }[] = []
+    for (const l of valid) {
+      const key = l.name.trim().toLowerCase()
+      let pid = byName.get(key)
+      if (!pid) {
+        const ins = await supabase
+          .from('products')
+          .insert({ name: l.name.trim(), unit: 'kg', price: 0 })
+          .select('id')
+          .single()
+        if (ins.error) {
+          setBusy(false)
+          setError(ins.error.message)
+          return
+        }
+        pid = (ins.data as { id: string }).id
+        byName.set(key, pid)
+      }
+      items.push({ product_id: pid, weight_kg: Number(l.weight_kg) })
+    }
     const { error } = await supabase.rpc('record_breakdown', {
       p_source_label: sourceLabel.trim() || null,
       p_source_weight: inWeight || null,
       p_date: date,
       p_notes: null,
       p_cattle: cattleId || null,
-      p_items: valid.map((l) => ({ product_id: l.product_id, weight_kg: Number(l.weight_kg) })),
+      p_items: items,
     })
     setBusy(false)
     if (error) setError(error.message)
     else {
-      setOk(`Saved — ${valid.length} cut(s) added to stock.`)
-      setLines([{ key: seq++, product_id: '', weight_kg: 0 }])
+      setOk(`Saved — ${items.length} cut(s) added to stock and the price list.`)
+      setLines([{ key: seq++, name: '', weight_kg: 0 }])
       setSourceWeight('')
       setCattleId('')
       load()
@@ -120,7 +143,8 @@ export function Butchering() {
       <PageHeader title="Butchering" />
       <p className="mb-4 text-sm text-slate-500">
         Record a whole animal coming in, list the cuts you get from it with their weights, and each
-        cut is added to your stock.
+        cut is added to your stock. A new cut name is also added to your <strong>price list</strong>
+        {' '}— set its price per kg under <strong>Prices</strong>.
       </p>
       {error && (
         <div className="mb-3">
@@ -168,6 +192,11 @@ export function Butchering() {
 
       <Card>
         <div className="mb-2 text-sm font-medium text-slate-700">Cuts (parts) and their weight</div>
+        <datalist id="cut-names">
+          {products.map((p) => (
+            <option key={p.id} value={p.name} />
+          ))}
+        </datalist>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -181,14 +210,12 @@ export function Butchering() {
               {lines.map((l) => (
                 <tr key={l.key} className="border-b border-slate-100 last:border-0">
                   <td className="py-2 pr-3">
-                    <Select value={l.product_id} onChange={(e) => setLine(l.key, { product_id: e.target.value })}>
-                      <option value="">— pick cut —</option>
-                      {products.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name}
-                        </option>
-                      ))}
-                    </Select>
+                    <Input
+                      list="cut-names"
+                      value={l.name}
+                      onChange={(e) => setLine(l.key, { name: e.target.value })}
+                      placeholder="type or pick a cut"
+                    />
                   </td>
                   <td className="py-2 pr-3">
                     <Input
