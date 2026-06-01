@@ -10,6 +10,7 @@ export interface Product {
   name: string
   category: Category | null
   unit: Unit
+  base_price: number
   price: number
   cost: number | null
   sort_order: number
@@ -24,6 +25,7 @@ export interface Customer {
   type: CustomerType
   phone: string | null
   opening_balance: number
+  credit_limit: number
   notes: string | null
   is_active: boolean
 }

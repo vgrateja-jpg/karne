@@ -35,6 +35,16 @@ body {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
+  /* when a day modal is open, print only the modal */
+  .no-print-when-modal {
+    display: none !important;
+  }
+  .day-modal-overlay {
+    position: static !important;
+    overflow: visible !important;
+    background: transparent !important;
+    padding: 0 !important;
+  }
 }
 
 @page {

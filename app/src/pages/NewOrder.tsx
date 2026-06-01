@@ -19,6 +19,7 @@ export function NewOrder() {
   const [products, setProducts] = useState<Product[]>([])
   const [customers, setCustomers] = useState<Customer[]>([])
   const [branches, setBranches] = useState<Branch[]>([])
+  const [balances, setBalances] = useState<Record<string, number>>({})
   const [customerId, setCustomerId] = useState('')
   const [branchId, setBranchId] = useState('')
   const [orderDate, setOrderDate] = useState(today())
@@ -33,10 +34,16 @@ export function NewOrder() {
       supabase.from('products').select('*').eq('is_active', true).order('sort_order').order('name'),
       supabase.from('customers').select('*').eq('is_active', true).order('name'),
       supabase.from('branches').select('*').eq('is_active', true).order('name'),
-    ]).then(([p, c, b]) => {
+      supabase.from('v_customer_balance').select('customer_id,balance'),
+    ]).then(([p, c, b, bal]) => {
       if (p.data) setProducts(p.data as Product[])
       if (c.data) setCustomers(c.data as Customer[])
       if (b.data) setBranches(b.data as Branch[])
+      if (bal.data) {
+        const m: Record<string, number> = {}
+        for (const x of bal.data as { customer_id: string; balance: number }[]) m[x.customer_id] = Number(x.balance)
+        setBalances(m)
+      }
     })
   }, [])
 
@@ -65,6 +72,9 @@ export function NewOrder() {
 
   const total = lines.reduce((s, l) => s + (Number(l.quantity) || 0) * (Number(l.unit_price) || 0), 0)
   const validLines = lines.filter((l) => l.product_id && Number(l.quantity) > 0)
+  const selCust = customers.find((c) => c.id === customerId)
+  const selBalance = customerId ? balances[customerId] ?? 0 : 0
+  const overLimit = !!selCust && selCust.credit_limit > 0 && selBalance >= selCust.credit_limit
 
   async function save() {
     setError(null)
@@ -145,6 +155,15 @@ export function NewOrder() {
           )}
         </div>
       </Card>
+
+      {selBalance > 0 && (
+        <div className="mb-4">
+          <Banner kind={overLimit ? 'error' : 'info'}>
+            {selCust?.name} currently owes <strong>{money(selBalance)}</strong>
+            {overLimit ? ` — over their ${money(selCust?.credit_limit ?? 0)} credit limit.` : '.'}
+          </Banner>
+        </div>
+      )}
 
       <Card>
         <div className="overflow-x-auto">

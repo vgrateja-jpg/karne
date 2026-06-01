@@ -13,6 +13,7 @@ const blank = {
   type: 'wholesale' as CustomerType,
   phone: '',
   opening_balance: 0,
+  credit_limit: 0,
 }
 
 export function Customers() {
@@ -50,6 +51,7 @@ export function Customers() {
       type: editing.type,
       phone: editing.phone.trim() || null,
       opening_balance: Number(editing.opening_balance) || 0,
+      credit_limit: Number(editing.credit_limit) || 0,
     }
     const res = editing.id
       ? await supabase.from('customers').update(payload).eq('id', editing.id)
@@ -57,6 +59,21 @@ export function Customers() {
     if (res.error) setError(res.error.message)
     else {
       setEditing(null)
+      load()
+    }
+  }
+
+  async function deleteCustomer(id: string, name: string) {
+    if (!window.confirm(`Delete customer "${name}"? This can't be undone.`)) return
+    setError(null)
+    const { error } = await supabase.from('customers').delete().eq('id', id)
+    if (error) {
+      setError(
+        /foreign key|violates/i.test(error.message)
+          ? `Can't delete "${name}" — they already have orders or payments on record. Edit them instead.`
+          : error.message,
+      )
+    } else {
       load()
     }
   }
@@ -100,6 +117,14 @@ export function Customers() {
                 step="0.01"
                 value={editing.opening_balance}
                 onChange={(e) => setEditing({ ...editing, opening_balance: Number(e.target.value) })}
+              />
+            </Field>
+            <Field label="Credit limit (0 = none)">
+              <Input
+                type="number"
+                step="0.01"
+                value={editing.credit_limit}
+                onChange={(e) => setEditing({ ...editing, credit_limit: Number(e.target.value) })}
               />
             </Field>
           </div>
@@ -147,20 +172,26 @@ export function Customers() {
                       </span>
                     </td>
                     <td className="py-2 text-right">
-                      <Button
-                        variant="ghost"
-                        onClick={() =>
-                          setEditing({
-                            id: c.id,
-                            name: c.name,
-                            type: c.type,
-                            phone: c.phone ?? '',
-                            opening_balance: c.opening_balance,
-                          })
-                        }
-                      >
-                        Edit
-                      </Button>
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          onClick={() =>
+                            setEditing({
+                              id: c.id,
+                              name: c.name,
+                              type: c.type,
+                              phone: c.phone ?? '',
+                              opening_balance: c.opening_balance,
+                              credit_limit: c.credit_limit,
+                            })
+                          }
+                        >
+                          Edit
+                        </Button>
+                        <Button variant="danger" onClick={() => deleteCustomer(c.id, c.name)}>
+                          Delete
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}

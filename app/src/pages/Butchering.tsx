@@ -74,31 +74,11 @@ export function Butchering() {
   }, [])
 
   async function deleteBreakdown(id: string) {
-    if (!window.confirm('Delete this butchering record? Its cuts will be removed from stock.')) return
+    if (!window.confirm('Delete this butchering? Its cuts are removed from stock, and any new cut-products it created are removed from the price list.')) return
     setError(null)
-    // reverse the stock this breakdown added (insert offsetting adjustments)
-    const items = await supabase.from('breakdown_items').select('product_id, weight_kg').eq('breakdown_id', id)
-    if (items.error) {
-      setError(items.error.message)
-      return
-    }
-    const movs = (items.data ?? []).map((it: { product_id: string; weight_kg: number }) => ({
-      product_id: it.product_id,
-      moved_on: today(),
-      type: 'adjustment',
-      quantity: -Number(it.weight_kg),
-      reference: 'breakdown removed',
-    }))
-    if (movs.length) {
-      const ins = await supabase.from('inventory_movements').insert(movs)
-      if (ins.error) {
-        setError(ins.error.message)
-        return
-      }
-    }
-    const del = await supabase.from('breakdowns').delete().eq('id', id)
-    if (del.error) {
-      setError(del.error.message)
+    const { error } = await supabase.rpc('delete_breakdown', { p_breakdown: id })
+    if (error) {
+      setError(error.message)
       return
     }
     if (expanded === id) setExpanded(null)

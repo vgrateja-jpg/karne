@@ -3,7 +3,7 @@
 A free, full-stack order / inventory / receivables system for a meat-supply business —
 built to replace a 56-tab Google Sheets workbook.
 
-**🔗 Live:** https://vgrateja.github.io/karne/ — deploys automatically on every push to `main`.
+**🔗 Live:** https://vgrateja-jpg.github.io/karne/ — deploys automatically on every push to `main`.
 
 - **Frontend:** React + Vite + TypeScript (static site → GitHub Pages)
 - **Backend:** Supabase (Postgres + Auth + Row Level Security + Edge Functions)
@@ -77,7 +77,7 @@ npm run dev                     # opens http://localhost:5173
 Without Supabase credentials the app still loads — the login screen just shows a "not
 configured yet" note. To use it for real:
 
-1. Create a free Supabase project, run the migrations in order — `0001_*.sql` … `0004_*.sql`
+1. Create a free Supabase project, run the migrations in order — `0001_*.sql` … `0015_*.sql`
    (and optionally `supabase/seed_products.sql`) — in the SQL editor.
 2. Disable public sign-up and add the owner account (see *One-time Auth setup* above).
 3. Put the project URL + **publishable** key in `app/.env.local`.
@@ -106,13 +106,25 @@ configured yet" note. To use it for real:
 - **Purchases & suppliers** — also tracks **supplier account balances (payables)** + payments to them
 - **Loans & financing** — money borrowed (payable) / lent (receivable) with running balances
 - **Cheques** — register received/issued cheques with due dates + status (pending → cleared)
-- **Branches** — optional: tag orders by location (add branches in Settings)
-- **Butchering** — record a whole animal in, list the cuts + weights; each cut is added to stock (shows yield)
-- **Dashboard** — sales today, receivables, **payables**, cash on hand, and this-month sales /
-  purchases / expenses / rough profit
+- **Branches** — optional: tag orders by location (add in Settings; shown on orders)
+- **Butchering** — whole animal in → cuts (auto-added to Prices + Stock, with yield); deleting a
+  butchering removes its cuts from both
+- **Dashboard** — sales today, money owed to you, money you owe, cash on hand, this-month totals
 
-## Next
+**Latest additions:**
+- **Order lifecycle** — open any order to adjust actual delivered weights, mark delivered/paid,
+  **void** (returns stock) or **delete**
+- **Deliveries** — daily delivery list + printable slips
+- **Receivables aging** (0–30/31–60/61–90/90+) + per-customer **credit limit** + at-order warning
+- **End-of-day Cash count** (expected vs counted)
+- **Full customer ledger** — running balance, pay full/partial, add charges, search/sort, delete
+  entries, printable statement / **PDF**
+- **Prices** — separate **Unit price** (base) + **Sale price**, any unit (kg/g/lb/pc…)
+- **Daily Report** + reworked **Monthly Report** (real dates, all days, tap-a-day modal, PDF) +
+  **Historical Report** (year → quarter → month)
+- App is **code-split** (lazy-loaded pages) for a lighter first load
 
-Migrate her real data: import actual customers + opening balances from the workbook and tune the
-product list/prices, staged as SQL to review before applying. Nothing is pushed to GitHub or
-applied to Supabase without your go-ahead.
+## Status
+
+Built and live well beyond the original phases. See `HOW_TO_USE.md` for the full feature list.
+Migrations `0001`–`0015` are applied. Data was reset to a clean slate for real use.

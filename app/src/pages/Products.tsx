@@ -12,6 +12,7 @@ const blank = {
   name: '',
   category: 'beef' as Category,
   unit: 'kg' as Unit,
+  base_price: 0,
   price: 0,
   is_active: true,
 }
@@ -45,6 +46,7 @@ export function Products() {
       name: editing.name.trim(),
       category: editing.category,
       unit: editing.unit,
+      base_price: Number(editing.base_price) || 0,
       price: Number(editing.price) || 0,
       is_active: editing.is_active,
     }
@@ -101,7 +103,15 @@ export function Products() {
                 ))}
               </datalist>
             </Field>
-            <Field label="Price (₱ per unit)">
+            <Field label="Unit price (base)">
+              <Input
+                type="number"
+                step="0.01"
+                value={editing.base_price}
+                onChange={(e) => setEditing({ ...editing, base_price: Number(e.target.value) })}
+              />
+            </Field>
+            <Field label="Sale price">
               <Input
                 type="number"
                 step="0.01"
@@ -136,7 +146,8 @@ export function Products() {
                   <th className="py-2 pr-3">Name</th>
                   <th className="py-2 pr-3">Category</th>
                   <th className="py-2 pr-3">Unit</th>
-                  <th className="py-2 pr-3 text-right">Price</th>
+                  <th className="py-2 pr-3 text-right">Unit price</th>
+                  <th className="py-2 pr-3 text-right">Sale price</th>
                   <th className="py-2"></th>
                 </tr>
               </thead>
@@ -146,6 +157,7 @@ export function Products() {
                     <td className="py-2 pr-3 font-medium text-slate-800">{p.name}</td>
                     <td className="py-2 pr-3 text-slate-500">{p.category}</td>
                     <td className="py-2 pr-3 text-slate-500">{p.unit}</td>
+                    <td className="py-2 pr-3 text-right tabular-nums text-slate-500">{money(p.base_price)}</td>
                     <td className="py-2 pr-3 text-right tabular-nums">{money(p.price)}</td>
                     <td className="py-2 text-right">
                       <Button
@@ -156,6 +168,7 @@ export function Products() {
                             name: p.name,
                             category: (p.category ?? 'other') as Category,
                             unit: p.unit,
+                            base_price: p.base_price,
                             price: p.price,
                             is_active: p.is_active,
                           })

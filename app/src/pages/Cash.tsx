@@ -11,6 +11,7 @@ export function Cash() {
   const [txns, setTxns] = useState<(BankTxn & { account?: { name: string } | null })[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [editing, setEditing] = useState<{ id: string; name: string; type: AccountType; opening_balance: number } | null>(null)
 
   // add account
   const [accName, setAccName] = useState('')
@@ -64,6 +65,38 @@ export function Cash() {
     else {
       setAccName('')
       setAccOpening('')
+      load()
+    }
+  }
+
+  async function saveEdit() {
+    if (!editing) return
+    setError(null)
+    setBusy(true)
+    const { error } = await supabase
+      .from('bank_accounts')
+      .update({ name: editing.name.trim(), type: editing.type, opening_balance: Number(editing.opening_balance) || 0 })
+      .eq('id', editing.id)
+    setBusy(false)
+    if (error) setError(error.message)
+    else {
+      setEditing(null)
+      load()
+    }
+  }
+
+  async function deleteAccount(id: string, name: string) {
+    if (!window.confirm(`Delete account "${name}"? This can't be undone.`)) return
+    setError(null)
+    const { error } = await supabase.from('bank_accounts').delete().eq('id', id)
+    if (error) {
+      setError(
+        /foreign key|violates/i.test(error.message)
+          ? `Can't delete "${name}" — it has deposits/withdrawals recorded. Remove those first, or just leave it.`
+          : error.message,
+      )
+    } else {
+      setEditing(null)
       load()
     }
   }
@@ -131,6 +164,45 @@ export function Cash() {
         </div>
       )}
 
+      {editing && (
+        <Card className="mb-4">
+          <div className="mb-2 text-sm font-medium text-slate-700">Edit account</div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <Field label="Name">
+              <Input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} />
+            </Field>
+            <Field label="Type">
+              <Select value={editing.type} onChange={(e) => setEditing({ ...editing, type: e.target.value as AccountType })}>
+                {ACCOUNT_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Opening balance">
+              <Input
+                type="number"
+                step="0.01"
+                value={editing.opening_balance}
+                onChange={(e) => setEditing({ ...editing, opening_balance: Number(e.target.value) })}
+              />
+            </Field>
+          </div>
+          <div className="mt-3 flex gap-2">
+            <Button onClick={saveEdit} disabled={busy || !editing.name.trim()}>
+              Save
+            </Button>
+            <Button variant="ghost" onClick={() => setEditing(null)}>
+              Cancel
+            </Button>
+            <Button variant="danger" onClick={() => deleteAccount(editing.id, editing.name)}>
+              Delete
+            </Button>
+          </div>
+        </Card>
+      )}
+
       {/* balances */}
       <Card className="mb-4">
         <div className="mb-2 text-sm font-medium text-slate-700">Accounts</div>
@@ -142,8 +214,20 @@ export function Cash() {
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {balances.map((b) => (
               <div key={b.account_id} className="rounded-lg border border-slate-200 p-3">
-                <div className="text-sm font-medium text-slate-800">{b.name}</div>
-                <div className="text-xs uppercase text-slate-400">{b.type}</div>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="text-sm font-medium text-slate-800">{b.name}</div>
+                    <div className="text-xs uppercase text-slate-400">{b.type}</div>
+                  </div>
+                  <button
+                    onClick={() =>
+                      setEditing({ id: b.account_id, name: b.name, type: b.type, opening_balance: b.opening_balance })
+                    }
+                    className="text-xs text-slate-400 hover:text-rose-600"
+                  >
+                    Edit
+                  </button>
+                </div>
                 <div className={`mt-1 text-lg font-semibold tabular-nums ${b.balance < 0 ? 'text-rose-600' : 'text-slate-900'}`}>
                   {money(b.balance)}
                 </div>

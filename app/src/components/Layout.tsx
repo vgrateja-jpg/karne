@@ -21,6 +21,7 @@ const groups: NavGroup[] = [
       { to: '/orders/new', label: 'New order', icon: '✍️' },
       { to: '/inbox', label: 'Text orders', icon: '📩' },
       { to: '/orders', label: 'Orders', icon: '🧾' },
+      { to: '/delivery', label: 'Deliveries', icon: '🚛' },
     ],
   },
   {
@@ -42,6 +43,8 @@ const groups: NavGroup[] = [
     title: 'Money',
     items: [
       { to: '/cash', label: 'Cash & Banks', icon: '💵' },
+      { to: '/cashcount', label: 'Cash count', icon: '🧮' },
+      { to: '/receivables', label: 'Receivables', icon: '📥' },
       { to: '/expenses', label: 'Expenses', icon: '💸' },
       { to: '/checks', label: 'Cheques', icon: '💳' },
       { to: '/loans', label: 'Loans', icon: '🏦' },
@@ -50,7 +53,9 @@ const groups: NavGroup[] = [
   {
     title: 'Reports & setup',
     items: [
+      { to: '/daily', label: 'Daily Report', icon: '📆' },
       { to: '/month', label: 'Monthly Report', icon: '📊' },
+      { to: '/history', label: 'Historical', icon: '🗂️' },
       { to: '/settings', label: 'Settings', icon: '⚙️' },
     ],
   },
