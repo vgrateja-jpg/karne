@@ -1,0 +1,53 @@
+# Nightly database backup for Karne.
+# Place this file at  .github/workflows/backup.yml  inside a PRIVATE GitHub repo.
+# It dumps the whole "public" schema (all her data) every night and commits a
+# dated, compressed copy into the repo's backups/ folder. Free.
+#
+# One-time setup (see SETUP.md):
+#   - add a repo secret  SUPABASE_DB_URL  = the Supabase "Session pooler" URI
+#
+name: Nightly backup
+
+on:
+  schedule:
+    - cron: '0 18 * * *' # 18:00 UTC daily (~02:00 PH / ~04:00 AEST — after closing)
+  workflow_dispatch: {} # also lets you run it on demand from the Actions tab
+
+permissions:
+  contents: write # needed so the job can commit the backup file back
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PostgreSQL 17 client
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          sudo sh -c 'echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
+
+      - name: Dump database
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          mkdir -p backups
+          STAMP=$(date -u +'%Y-%m-%d')
+          pg_dump "$DB_URL" --schema=public --clean --if-exists --no-owner --no-privileges \
+            | gzip > "backups/karne-$STAMP.sql.gz"
+          echo "Wrote backups/karne-$STAMP.sql.gz ($(du -h backups/karne-$STAMP.sql.gz | cut -f1))"
+
+      - name: Keep only the last 30 days
+        run: |
+          ls -1t backups/karne-*.sql.gz | tail -n +31 | xargs -r rm --
+
+      - name: Commit backup
+        run: |
+          git config user.name 'backup-bot'
+          git config user.email 'backup-bot@users.noreply.github.com'
+          git add backups/
+          git commit -m "Backup $(date -u +'%Y-%m-%d')" || { echo "Nothing new to commit"; exit 0; }
+          git push

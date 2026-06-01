@@ -10,6 +10,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard').then((m) => ({ default:
 const Daily = lazy(() => import('./pages/Daily').then((m) => ({ default: m.Daily })))
 const Month = lazy(() => import('./pages/Month').then((m) => ({ default: m.Month })))
 const History = lazy(() => import('./pages/History').then((m) => ({ default: m.History })))
+const Audit = lazy(() => import('./pages/Audit').then((m) => ({ default: m.Audit })))
 const Inbox = lazy(() => import('./pages/Inbox').then((m) => ({ default: m.Inbox })))
 const NewOrder = lazy(() => import('./pages/NewOrder').then((m) => ({ default: m.NewOrder })))
 const Orders = lazy(() => import('./pages/Orders').then((m) => ({ default: m.Orders })))
@@ -46,6 +47,7 @@ export default function App() {
           <Route path="/daily" element={<Daily />} />
           <Route path="/month" element={<Month />} />
           <Route path="/history" element={<History />} />
+          <Route path="/audit" element={<Audit />} />
           <Route path="/inbox" element={<Inbox />} />
           <Route path="/orders/new" element={<NewOrder />} />
           <Route path="/orders/:id/receipt" element={<Receipt />} />
