@@ -29,7 +29,7 @@ export function Butchering() {
   const [ok, setOk] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
-  const [sourceLabel, setSourceLabel] = useState('Whole cow')
+  const [sourceLabel, setSourceLabel] = useState('')
   const [sourceWeight, setSourceWeight] = useState<number | ''>('')
   const [cattleId, setCattleId] = useState('')
   const [date, setDate] = useState(today())
@@ -173,6 +173,7 @@ export function Butchering() {
     else {
       setOk(`Saved — ${items.length} cut(s) added to stock and the price list.`)
       setLines([{ key: seq++, name: '', weight_kg: 0 }])
+      setSourceLabel('')
       setSourceWeight('')
       setCattleId('')
       load()
