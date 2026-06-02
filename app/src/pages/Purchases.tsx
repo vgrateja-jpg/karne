@@ -22,7 +22,8 @@ export function Purchases() {
   const [paySup, setPaySup] = useState('')
   const [payAmt, setPayAmt] = useState<number | ''>('')
   const payDate = today()
-  const [payMethod, setPayMethod] = useState('cash')
+  const [payAccount, setPayAccount] = useState('')
+  const [accounts, setAccounts] = useState<{ id: string; name: string; type: string }[]>([])
 
   // cattle form
   const [cTag, setCTag] = useState('')
@@ -41,12 +42,13 @@ export function Purchases() {
 
   async function load() {
     setLoading(true)
-    const [s, b, c, o, pr] = await Promise.all([
+    const [s, b, c, o, pr, a] = await Promise.all([
       supabase.from('suppliers').select('*').eq('is_active', true).order('name'),
       supabase.from('v_supplier_balance').select('*').order('name'),
       supabase.from('cattle_purchases').select('*').order('purchased_on', { ascending: false }).limit(100),
       supabase.from('purchases').select('*').order('purchased_on', { ascending: false }).limit(100),
       supabase.from('products').select('*').eq('is_active', true).order('sort_order').order('name'),
+      supabase.from('bank_accounts').select('id,name,type').eq('is_active', true).order('name'),
     ])
     if (s.error) setError(s.error.message)
     else setSuppliers((s.data ?? []) as Supplier[])
@@ -54,6 +56,11 @@ export function Purchases() {
     if (c.data) setCattle(c.data as CattlePurchase[])
     if (o.data) setOther(o.data as Purchase[])
     if (pr.data) setProducts(pr.data as Product[])
+    if (a.data) {
+      const accs = a.data as { id: string; name: string; type: string }[]
+      setAccounts(accs)
+      setPayAccount((prev) => prev || accs.find((x) => x.type === 'cash')?.id || '')
+    }
     setLoading(false)
   }
   useEffect(() => {
@@ -86,7 +93,7 @@ export function Purchases() {
     setBusy(true)
     const { error } = await supabase
       .from('supplier_payments')
-      .insert({ supplier_id: paySup, amount: Number(payAmt), paid_on: payDate, method: payMethod })
+      .insert({ supplier_id: paySup, amount: Number(payAmt), paid_on: payDate, bank_account_id: payAccount || null })
     setBusy(false)
     if (error) setError(error.message)
     else {
@@ -234,12 +241,14 @@ export function Purchases() {
             <Field label="Amount">
               <Input type="number" step="0.01" min="0" value={payAmt} onChange={(e) => setPayAmt(e.target.value === '' ? '' : Number(e.target.value))} />
             </Field>
-            <Field label="Method">
-              <Select value={payMethod} onChange={(e) => setPayMethod(e.target.value)}>
-                <option value="cash">Cash</option>
-                <option value="bank">Bank</option>
-                <option value="gcash">GCash</option>
-                <option value="check">Check</option>
+            <Field label="Paid from">
+              <Select value={payAccount} onChange={(e) => setPayAccount(e.target.value)}>
+                <option value="">— (not from an account) —</option>
+                {accounts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
               </Select>
             </Field>
             <Button onClick={paySupplier} disabled={busy}>

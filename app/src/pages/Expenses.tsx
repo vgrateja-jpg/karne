@@ -33,7 +33,11 @@ export function Expenses() {
     ])
     if (e.error) setError(e.error.message)
     else setRows((e.data ?? []) as Expense[])
-    if (a.data) setAccounts(a.data as BankAccount[])
+    if (a.data) {
+      const accs = a.data as BankAccount[]
+      setAccounts(accs)
+      setAccountId((prev) => prev || accs.find((x) => x.type === 'cash')?.id || '')
+    }
     setLoading(false)
   }
   useEffect(() => {

@@ -3,6 +3,8 @@ import { supabase } from '../lib/supabase'
 import type { AccountBalance, AccountType, BankTxn } from '../lib/types'
 import { money, today } from '../lib/format'
 import { Banner, Button, Card, Field, Input, PageHeader, Select } from '../components/ui'
+import { StatementModal, type StatementRow } from '../components/StatementModal'
+import { fetchSettings } from '../lib/settings'
 
 const ACCOUNT_TYPES: AccountType[] = ['cash', 'bank', 'gcash', 'coop', 'check']
 
@@ -31,6 +33,32 @@ export function Cash() {
   const [xferAmt, setXferAmt] = useState<number | ''>('')
 
   const [busy, setBusy] = useState(false)
+
+  // per-account statement
+  const [stmt, setStmt] = useState<{ id: string; name: string } | null>(null)
+  const [stmtRows, setStmtRows] = useState<StatementRow[]>([])
+  const [stmtLoading, setStmtLoading] = useState(false)
+  const [businessName, setBusinessName] = useState('')
+
+  useEffect(() => {
+    fetchSettings().then((s) => setBusinessName(s?.business_name ?? ''))
+  }, [])
+
+  async function openStatement(id: string, name: string) {
+    setStmt({ id, name })
+    setStmtLoading(true)
+    setStmtRows([])
+    const { data } = await supabase.rpc('account_ledger', { p_account: id })
+    setStmtRows(
+      ((data ?? []) as { entry_date: string; description: string; amount: number; running: number }[]).map((r) => ({
+        date: r.entry_date,
+        label: r.description,
+        amount: Number(r.amount),
+        running: Number(r.running),
+      })),
+    )
+    setStmtLoading(false)
+  }
 
   async function load() {
     setLoading(true)
@@ -149,6 +177,7 @@ export function Cash() {
 
   return (
     <div>
+      <div className={stmt ? 'no-print-when-modal' : undefined}>
       <PageHeader
         title="Cash & Banks"
         action={
@@ -219,14 +248,22 @@ export function Cash() {
                     <div className="text-sm font-medium text-slate-800">{b.name}</div>
                     <div className="text-xs uppercase text-slate-400">{b.type}</div>
                   </div>
-                  <button
-                    onClick={() =>
-                      setEditing({ id: b.account_id, name: b.name, type: b.type, opening_balance: b.opening_balance })
-                    }
-                    className="text-xs text-slate-400 hover:text-rose-600"
-                  >
-                    Edit
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => openStatement(b.account_id, b.name)}
+                      className="text-xs text-slate-400 hover:text-rose-600"
+                    >
+                      Statement
+                    </button>
+                    <button
+                      onClick={() =>
+                        setEditing({ id: b.account_id, name: b.name, type: b.type, opening_balance: b.opening_balance })
+                      }
+                      className="text-xs text-slate-400 hover:text-rose-600"
+                    >
+                      Edit
+                    </button>
+                  </div>
                 </div>
                 <div className={`mt-1 text-lg font-semibold tabular-nums ${b.balance < 0 ? 'text-rose-600' : 'text-slate-900'}`}>
                   {money(b.balance)}
@@ -373,6 +410,18 @@ export function Cash() {
           </div>
         )}
       </Card>
+      </div>
+
+      {stmt && (
+        <StatementModal
+          title={`Statement — ${stmt.name}`}
+          businessName={businessName}
+          rows={stmtRows}
+          loading={stmtLoading}
+          closingLabel="Balance"
+          onClose={() => setStmt(null)}
+        />
+      )}
     </div>
   )
 }

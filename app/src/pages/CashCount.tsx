@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { money, today } from '../lib/format'
-import { Banner, Button, Card, Field, Input, PageHeader } from '../components/ui'
+import { Banner, Button, Card, Field, Input, PageHeader, Select } from '../components/ui'
 
 interface CountRow {
   id: string
@@ -10,12 +10,17 @@ interface CountRow {
   counted: number
   notes: string | null
 }
+interface Acct {
+  id: string
+  name: string
+  type: string
+}
 
 export function CashCount() {
   const [date, setDate] = useState(today())
-  const [cashSales, setCashSales] = useState(0)
-  const [cashPayments, setCashPayments] = useState(0)
-  const [cashExpenses, setCashExpenses] = useState(0)
+  const [accounts, setAccounts] = useState<Acct[]>([])
+  const [accountId, setAccountId] = useState('')
+  const [expected, setExpected] = useState<number | null>(null)
   const [counted, setCounted] = useState<number | ''>('')
   const [notes, setNotes] = useState('')
   const [recent, setRecent] = useState<CountRow[]>([])
@@ -24,33 +29,38 @@ export function CashCount() {
   const [error, setError] = useState<string | null>(null)
   const [ok, setOk] = useState<string | null>(null)
 
-  async function loadDay() {
-    setLoading(true)
-    setError(null)
-    const [ord, pay, exp, counts] = await Promise.all([
-      supabase.from('orders').select('id').eq('order_date', date).is('customer_id', null).neq('status', 'void'),
-      supabase.from('payments').select('amount').eq('paid_at', date).eq('method', 'cash'),
-      supabase.from('expenses').select('amount').eq('spent_on', date).is('bank_account_id', null),
-      supabase.from('cash_counts').select('*').order('count_date', { ascending: false }).limit(30),
-    ])
-    let sales = 0
-    const ids = (ord.data ?? []).map((o: { id: string }) => o.id)
-    if (ids.length) {
-      const tot = await supabase.from('v_order_totals').select('total').in('order_id', ids)
-      sales = (tot.data ?? []).reduce((s, t: { total: number }) => s + Number(t.total), 0)
-    }
-    setCashSales(sales)
-    setCashPayments((pay.data ?? []).reduce((s, p: { amount: number }) => s + Number(p.amount), 0))
-    setCashExpenses((exp.data ?? []).reduce((s, e: { amount: number }) => s + Number(e.amount), 0))
-    if (counts.data) setRecent(counts.data as CountRow[])
-    setLoading(false)
-  }
   useEffect(() => {
-    loadDay()
-  }, [date])
+    supabase
+      .from('bank_accounts')
+      .select('id,name,type')
+      .eq('is_active', true)
+      .order('name')
+      .then(({ data }) => {
+        const accs = (data ?? []) as Acct[]
+        setAccounts(accs)
+        setAccountId((prev) => prev || accs.find((a) => a.type === 'cash')?.id || accs[0]?.id || '')
+      })
+  }, [])
 
-  const expected = cashSales + cashPayments - cashExpenses
-  const variance = counted === '' ? 0 : Number(counted) - expected
+  useEffect(() => {
+    async function loadDay() {
+      setLoading(true)
+      setError(null)
+      const counts = await supabase.from('cash_counts').select('*').order('count_date', { ascending: false }).limit(30)
+      if (counts.data) setRecent(counts.data as CountRow[])
+      if (accountId) {
+        const { data, error } = await supabase.rpc('cash_expected', { p_account: accountId, p_as_of: date })
+        if (error) setError(error.message)
+        else setExpected(Number(data ?? 0))
+      } else {
+        setExpected(null)
+      }
+      setLoading(false)
+    }
+    loadDay()
+  }, [date, accountId])
+
+  const variance = counted === '' || expected === null ? 0 : Number(counted) - expected
 
   async function saveCount() {
     setError(null)
@@ -62,7 +72,7 @@ export function CashCount() {
     setBusy(true)
     const { error } = await supabase.from('cash_counts').insert({
       count_date: date,
-      expected,
+      expected: expected ?? 0,
       counted: Number(counted),
       notes: notes.trim() || null,
     })
@@ -72,18 +82,11 @@ export function CashCount() {
       setOk('Cash count saved.')
       setCounted('')
       setNotes('')
-      loadDay()
+      // refresh recent list
+      const counts = await supabase.from('cash_counts').select('*').order('count_date', { ascending: false }).limit(30)
+      if (counts.data) setRecent(counts.data as CountRow[])
     }
   }
-
-  const Row = ({ label, value, sub }: { label: string; value: number; sub?: string }) => (
-    <div className="flex items-center justify-between py-1.5 text-sm">
-      <span className="text-slate-600">
-        {label} {sub && <span className="text-xs text-slate-400">{sub}</span>}
-      </span>
-      <span className="tabular-nums">{money(value)}</span>
-    </div>
-  )
 
   return (
     <div>
@@ -102,56 +105,66 @@ export function CashCount() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <Card>
-          <div className="mb-1 text-sm font-medium text-slate-700">What the day says you should have</div>
-          {loading ? (
-            <div className="py-6 text-center text-slate-400">Loading…</div>
-          ) : (
-            <>
-              <Row label="Cash sales (walk-in)" value={cashSales} />
-              <Row label="Cash collected from customers" value={cashPayments} />
-              <Row label="Less: cash expenses" value={-cashExpenses} />
-              <div className="mt-1 flex items-center justify-between border-t border-slate-200 pt-2 text-sm font-semibold">
-                <span>Expected cash</span>
-                <span className="tabular-nums">{money(expected)}</span>
-              </div>
-            </>
-          )}
-        </Card>
-
-        <Card>
-          <div className="mb-2 text-sm font-medium text-slate-700">What you actually counted</div>
-          <Field label="Cash counted">
-            <Input
-              type="number"
-              step="0.01"
-              value={counted}
-              onChange={(e) => setCounted(e.target.value === '' ? '' : Number(e.target.value))}
-            />
-          </Field>
-          <div className="mt-2">
-            <Field label="Notes (optional)">
-              <Input value={notes} onChange={(e) => setNotes(e.target.value)} />
+      {accounts.length === 0 ? (
+        <Banner kind="info">Add a “Cash on hand” account under Cash &amp; Banks first, then come back to count it.</Banner>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <Card>
+            <div className="mb-2 text-sm font-medium text-slate-700">What the books say you should have</div>
+            <Field label="Cash account">
+              <Select value={accountId} onChange={(e) => setAccountId(e.target.value)}>
+                {accounts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
+              </Select>
             </Field>
-          </div>
-          <div className="mt-3 flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
-            <span className="text-sm text-slate-600">Difference</span>
-            <span
-              className={`text-lg font-semibold tabular-nums ${
-                counted === '' ? 'text-slate-400' : Math.abs(variance) < 0.005 ? 'text-emerald-600' : 'text-rose-600'
-              }`}
-            >
-              {counted === '' ? '—' : (variance > 0 ? '+' : '') + money(variance)}
-            </span>
-          </div>
-          <div className="mt-3">
-            <Button onClick={saveCount} disabled={busy}>
-              {busy ? 'Saving…' : 'Save count'}
-            </Button>
-          </div>
-        </Card>
-      </div>
+            <div className="mt-3 flex items-center justify-between border-t border-slate-200 pt-3">
+              <span className="text-sm text-slate-600">Computed balance (as of {date})</span>
+              <span className="text-xl font-semibold tabular-nums text-slate-900">
+                {loading ? '…' : money(expected ?? 0)}
+              </span>
+            </div>
+            <p className="mt-2 text-[11px] text-slate-400">
+              Opening balance + cash sales + cash collected + deposits − cash expenses − cash paid to suppliers/loans. Tag
+              expenses and payments as paid from this account so they're counted here.
+            </p>
+          </Card>
+
+          <Card>
+            <div className="mb-2 text-sm font-medium text-slate-700">What you actually counted</div>
+            <Field label="Cash counted">
+              <Input
+                type="number"
+                step="0.01"
+                value={counted}
+                onChange={(e) => setCounted(e.target.value === '' ? '' : Number(e.target.value))}
+              />
+            </Field>
+            <div className="mt-2">
+              <Field label="Notes (optional)">
+                <Input value={notes} onChange={(e) => setNotes(e.target.value)} />
+              </Field>
+            </div>
+            <div className="mt-3 flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
+              <span className="text-sm text-slate-600">Difference</span>
+              <span
+                className={`text-lg font-semibold tabular-nums ${
+                  counted === '' ? 'text-slate-400' : Math.abs(variance) < 0.005 ? 'text-emerald-600' : 'text-rose-600'
+                }`}
+              >
+                {counted === '' ? '—' : (variance > 0 ? '+' : '') + money(variance)}
+              </span>
+            </div>
+            <div className="mt-3">
+              <Button onClick={saveCount} disabled={busy}>
+                {busy ? 'Saving…' : 'Save count'}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
 
       <Card className="mt-4">
         <div className="mb-2 text-sm font-medium text-slate-700">Recent counts</div>

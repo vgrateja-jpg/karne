@@ -3,6 +3,14 @@ import { supabase } from '../lib/supabase'
 import type { Loan, LoanBalance, LoanDirection } from '../lib/types'
 import { money, today } from '../lib/format'
 import { Banner, Button, Card, Field, Input, PageHeader, Select } from '../components/ui'
+import { StatementModal, type StatementRow } from '../components/StatementModal'
+import { fetchSettings } from '../lib/settings'
+
+interface Acct {
+  id: string
+  name: string
+  type: string
+}
 
 export function Loans() {
   const [loans, setLoans] = useState<Loan[]>([])
@@ -21,12 +29,42 @@ export function Loans() {
   const [txType, setTxType] = useState<'principal' | 'interest' | 'payment' | 'adjustment'>('principal')
   const [txAmt, setTxAmt] = useState<number | ''>('')
   const [txDate, setTxDate] = useState(today())
+  const [txAccount, setTxAccount] = useState('')
+
+  const [accounts, setAccounts] = useState<Acct[]>([])
+  const [businessName, setBusinessName] = useState('')
+
+  // loan ledger
+  const [stmt, setStmt] = useState<{ id: string; party: string } | null>(null)
+  const [stmtRows, setStmtRows] = useState<StatementRow[]>([])
+  const [stmtLoading, setStmtLoading] = useState(false)
+
+  useEffect(() => {
+    fetchSettings().then((s) => setBusinessName(s?.business_name ?? ''))
+  }, [])
+
+  async function openLedger(id: string, party: string) {
+    setStmt({ id, party })
+    setStmtLoading(true)
+    setStmtRows([])
+    const { data } = await supabase.rpc('loan_ledger', { p_loan: id })
+    setStmtRows(
+      ((data ?? []) as { entry_date: string; kind: string; amount: number; running: number }[]).map((r) => ({
+        date: r.entry_date,
+        label: r.kind,
+        amount: Number(r.amount),
+        running: Number(r.running),
+      })),
+    )
+    setStmtLoading(false)
+  }
 
   async function load() {
     setLoading(true)
-    const [l, b] = await Promise.all([
+    const [l, b, a] = await Promise.all([
       supabase.from('loans').select('*').eq('is_active', true).order('party_name'),
       supabase.from('v_loan_balance').select('loan_id,balance'),
+      supabase.from('bank_accounts').select('id,name,type').eq('is_active', true).order('name'),
     ])
     if (l.error) setError(l.error.message)
     else setLoans((l.data ?? []) as Loan[])
@@ -34,6 +72,10 @@ export function Loans() {
       const map: Record<string, number> = {}
       for (const r of b.data as LoanBalance[]) map[r.loan_id] = r.balance
       setBalances(map)
+    }
+    if (a.data) {
+      setAccounts(a.data as Acct[])
+      setTxAccount((prev) => prev || (a.data as Acct[]).find((x) => x.type === 'cash')?.id || '')
     }
     setLoading(false)
   }
@@ -63,9 +105,16 @@ export function Loans() {
       return
     }
     setBusy(true)
+    const linksCash = txType === 'principal' || txType === 'payment'
     const { error } = await supabase
       .from('loan_transactions')
-      .insert({ loan_id: loanId, type: txType, amount: Number(txAmt), txn_on: txDate })
+      .insert({
+        loan_id: loanId,
+        type: txType,
+        amount: Number(txAmt),
+        txn_on: txDate,
+        bank_account_id: linksCash ? txAccount || null : null,
+      })
     setBusy(false)
     if (error) setError(error.message)
     else {
@@ -79,6 +128,7 @@ export function Loans() {
 
   return (
     <div>
+      <div className={stmt ? 'no-print-when-modal' : undefined}>
       <PageHeader title="Loans & financing" />
       {error && (
         <div className="mb-3">
@@ -152,7 +202,22 @@ export function Loans() {
             <Field label="Date">
               <Input type="date" value={txDate} onChange={(e) => setTxDate(e.target.value)} />
             </Field>
+            <div className="col-span-2">
+              <Field label="Cash/bank account (for principal & payments)">
+                <Select value={txAccount} onChange={(e) => setTxAccount(e.target.value)}>
+                  <option value="">— none (don't move cash) —</option>
+                  {accounts.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </div>
           </div>
+          <p className="mt-1 text-xs text-slate-400">
+            Borrowing adds the money to the account; a payment takes it out. Interest/adjustments don't move cash.
+          </p>
           <div className="mt-3">
             <Button onClick={recordTxn} disabled={busy}>
               Record
@@ -162,7 +227,10 @@ export function Loans() {
       </div>
 
       <Card>
-        <div className="mb-2 text-sm font-medium text-slate-700">Loans</div>
+        <div className="mb-2 flex items-baseline justify-between">
+          <span className="text-sm font-medium text-slate-700">Loans</span>
+          <span className="no-print text-xs text-slate-400">tap a loan for its ledger</span>
+        </div>
         {loading ? (
           <div className="py-6 text-center text-slate-400">Loading…</div>
         ) : loans.length === 0 ? (
@@ -180,7 +248,11 @@ export function Loans() {
               </thead>
               <tbody>
                 {loans.map((l) => (
-                  <tr key={l.id} className="border-b border-slate-100 last:border-0">
+                  <tr
+                    key={l.id}
+                    onClick={() => openLedger(l.id, l.party_name)}
+                    className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
+                  >
                     <td className="py-2 pr-3 font-medium text-slate-800">{l.party_name}</td>
                     <td className="py-2 pr-3 text-slate-500">{l.direction === 'payable' ? 'You owe' : 'Owed to you'}</td>
                     <td className="py-2 pr-3 text-slate-500">{l.notes ?? '—'}</td>
@@ -194,6 +266,18 @@ export function Loans() {
           </div>
         )}
       </Card>
+      </div>
+
+      {stmt && (
+        <StatementModal
+          title={`Loan ledger — ${stmt.party}`}
+          businessName={businessName}
+          rows={stmtRows}
+          loading={stmtLoading}
+          closingLabel="Balance"
+          onClose={() => setStmt(null)}
+        />
+      )}
     </div>
   )
 }
