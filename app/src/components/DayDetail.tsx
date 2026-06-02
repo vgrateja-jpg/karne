@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { money, qty as fmtQty } from '../lib/format'
+import { IncomeStatement } from './IncomeStatement'
 
 interface Period {
   sales: number
@@ -62,7 +63,6 @@ export function DayDetail({ date }: { date: string }) {
   }, [date])
 
   if (loading) return <div className="py-6 text-center text-slate-400">Loading…</div>
-  const profit = period ? period.sales - period.expenses - period.purchases : 0
 
   if (period && period.orders === 0 && period.payments === 0 && period.expenses === 0 && period.purchases === 0) {
     return <div className="py-6 text-center text-slate-400">No transactions on this day.</div>
@@ -70,14 +70,15 @@ export function DayDetail({ date }: { date: string }) {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+      <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
         <Stat label="Sales" value={money(period?.sales ?? 0)} />
         <Stat label="Orders" value={String(period?.orders ?? 0)} />
         <Stat label="Cash sales" value={money(period?.cash_sales ?? 0)} />
         <Stat label="Collected" value={money(period?.payments ?? 0)} />
         <Stat label="Expenses" value={money(period?.expenses ?? 0)} />
-        <Stat label="Profit" value={money(profit)} />
       </div>
+
+      <IncomeStatement from={date} to={date} />
 
       {byProduct.length > 0 && (
         <div>

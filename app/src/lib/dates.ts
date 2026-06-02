@@ -27,6 +27,13 @@ export function dayOfMonth(isoDate: string): number {
   return Number(isoDate.slice(8, 10))
 }
 
+// 'YYYY-MM-DD' shifted by n days (noon-UTC anchored to dodge timezone/DST edges).
+export function addDays(iso: string, n: number): string {
+  const d = new Date(iso + 'T12:00:00Z')
+  d.setUTCDate(d.getUTCDate() + n)
+  return d.toISOString().slice(0, 10)
+}
+
 export const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 

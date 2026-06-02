@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import type { CattlePurchase, Purchase, Supplier, SupplierBalance } from '../lib/types'
+import type { CattlePurchase, Product, Purchase, Supplier, SupplierBalance } from '../lib/types'
 import { money, qty as fmtQty, today } from '../lib/format'
 import { Banner, Button, Card, Field, Input, PageHeader, Select } from '../components/ui'
 
@@ -9,6 +9,7 @@ export function Purchases() {
   const [balances, setBalances] = useState<SupplierBalance[]>([])
   const [cattle, setCattle] = useState<CattlePurchase[]>([])
   const [other, setOther] = useState<Purchase[]>([])
+  const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -33,22 +34,26 @@ export function Purchases() {
   // other purchase form
   const [oSup, setOSup] = useState('')
   const [oDate, setODate] = useState(today())
-  const [oDesc, setODesc] = useState('')
+  const [oName, setOName] = useState('')
+  const [oQty, setOQty] = useState<number | ''>('')
+  const [oUnit, setOUnit] = useState('kg')
   const [oCost, setOCost] = useState<number | ''>('')
 
   async function load() {
     setLoading(true)
-    const [s, b, c, o] = await Promise.all([
+    const [s, b, c, o, pr] = await Promise.all([
       supabase.from('suppliers').select('*').eq('is_active', true).order('name'),
       supabase.from('v_supplier_balance').select('*').order('name'),
       supabase.from('cattle_purchases').select('*').order('purchased_on', { ascending: false }).limit(100),
       supabase.from('purchases').select('*').order('purchased_on', { ascending: false }).limit(100),
+      supabase.from('products').select('*').eq('is_active', true).order('sort_order').order('name'),
     ])
     if (s.error) setError(s.error.message)
     else setSuppliers((s.data ?? []) as Supplier[])
     if (b.data) setBalances(b.data as SupplierBalance[])
     if (c.data) setCattle(c.data as CattlePurchase[])
     if (o.data) setOther(o.data as Purchase[])
+    if (pr.data) setProducts(pr.data as Product[])
     setLoading(false)
   }
   useEffect(() => {
@@ -121,13 +126,37 @@ export function Purchases() {
       return
     }
     setBusy(true)
-    const { error } = await supabase
-      .from('purchases')
-      .insert({ supplier_id: oSup || null, purchased_on: oDate, description: oDesc.trim() || null, total_cost: Number(oCost) })
+    const name = oName.trim()
+    const wantsStock = !!name && oQty !== '' && Number(oQty) > 0
+    let productId: string | null = null
+    if (wantsStock) {
+      // resolve the item to a product, creating it (price 0) if it's new —
+      // so it appears in Prices and its quantity lands in Stock.
+      const key = name.toLowerCase()
+      productId = products.find((p) => p.name.trim().toLowerCase() === key)?.id ?? null
+      if (!productId) {
+        const ins = await supabase.from('products').insert({ name, unit: oUnit || 'kg', price: 0 }).select('id').single()
+        if (ins.error) {
+          setBusy(false)
+          setError(ins.error.message)
+          return
+        }
+        productId = (ins.data as { id: string }).id
+      }
+    }
+    const { error } = await supabase.rpc('record_other_purchase', {
+      p_supplier: oSup || null,
+      p_date: oDate,
+      p_description: name || null,
+      p_product: productId,
+      p_qty: wantsStock ? Number(oQty) : null,
+      p_total_cost: Number(oCost),
+    })
     setBusy(false)
     if (error) setError(error.message)
     else {
-      setODesc('')
+      setOName('')
+      setOQty('')
       setOCost('')
       load()
     }
@@ -274,6 +303,16 @@ export function Purchases() {
         {/* other purchases */}
         <Card>
           <div className="mb-2 text-sm font-medium text-slate-700">Other stock / supplier purchases</div>
+          <datalist id="other-items">
+            {products.map((p) => (
+              <option key={p.id} value={p.name} />
+            ))}
+          </datalist>
+          <datalist id="other-units">
+            {['kg', 'g', 'pc', 'box', 'pack', 'tray'].map((u) => (
+              <option key={u} value={u} />
+            ))}
+          </datalist>
           <div className="grid grid-cols-2 gap-2">
             <Field label="Supplier">
               <Select value={oSup} onChange={(e) => setOSup(e.target.value)}>
@@ -288,14 +327,31 @@ export function Purchases() {
             <Field label="Date">
               <Input type="date" value={oDate} onChange={(e) => setODate(e.target.value)} />
             </Field>
-            <Field label="Description">
-              <Input value={oDesc} onChange={(e) => setODesc(e.target.value)} placeholder="e.g. pork, chicken delivery" />
+            <Field label="Item (adds to stock)">
+              <Input list="other-items" value={oName} onChange={(e) => setOName(e.target.value)} placeholder="e.g. pork, chicken" />
+            </Field>
+            <Field label="Quantity (optional)">
+              <div className="flex gap-1">
+                <Input
+                  type="number"
+                  step="0.001"
+                  min="0"
+                  value={oQty}
+                  onChange={(e) => setOQty(e.target.value === '' ? '' : Number(e.target.value))}
+                  className="flex-1"
+                  placeholder="qty"
+                />
+                <Input list="other-units" value={oUnit} onChange={(e) => setOUnit(e.target.value)} className="w-16" />
+              </div>
             </Field>
             <Field label="Total cost">
               <Input type="number" step="0.01" min="0" value={oCost} onChange={(e) => setOCost(e.target.value === '' ? '' : Number(e.target.value))} />
             </Field>
           </div>
-          <div className="mt-3">
+          <p className="mt-2 text-xs text-slate-400">
+            Add an item + quantity to put it straight into <strong>Stock</strong>. Leave them blank to just record a cost.
+          </p>
+          <div className="mt-2">
             <Button onClick={addOther} disabled={busy}>
               + Add purchase
             </Button>

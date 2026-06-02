@@ -7,6 +7,7 @@ import { fetchSettings, type AppSettings } from '../lib/settings'
 import type { Branch } from '../lib/types'
 import { Banner, Button, Card, PageHeader, Select } from '../components/ui'
 import { DayDetail } from '../components/DayDetail'
+import { IncomeStatement } from '../components/IncomeStatement'
 
 interface DailyRow {
   day: string
@@ -147,6 +148,12 @@ export function Month() {
             <div className="mt-1 text-xl font-semibold tabular-nums">{totalOrders}</div>
           </Card>
         </div>
+
+        {!branchId && (
+          <div className="mb-4">
+            <IncomeStatement from={monthRange(year, month).from} to={monthRange(year, month).to} />
+          </div>
+        )}
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           {/* Day by day — every day, actual dates, tap to expand */}
