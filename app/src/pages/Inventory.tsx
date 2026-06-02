@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import type { Product, ProductStock } from '../lib/types'
 import { money, qty as fmtQty, today } from '../lib/format'
 import { Banner, Button, Card, Field, Input, PageHeader, Select } from '../components/ui'
+import { NumberInput } from '../components/NumberInput'
 
 export function Inventory() {
   const [stock, setStock] = useState<ProductStock[]>([])
@@ -12,7 +13,7 @@ export function Inventory() {
 
   // quick "record stock in" form
   const [productId, setProductId] = useState('')
-  const [quantity, setQuantity] = useState(0)
+  const [quantity, setQuantity] = useState<number | ''>('')
   const [movedOn, setMovedOn] = useState(today())
   const [unitCost, setUnitCost] = useState<number | ''>('')
   const [busy, setBusy] = useState(false)
@@ -54,7 +55,7 @@ export function Inventory() {
     if (error) setError(error.message)
     else {
       setOk('Stock added.')
-      setQuantity(0)
+      setQuantity('')
       setUnitCost('')
       load()
     }
@@ -86,19 +87,13 @@ export function Inventory() {
             </Select>
           </Field>
           <Field label="Quantity in">
-            <Input type="number" step="0.001" min="0" value={quantity || ''} onChange={(e) => setQuantity(Number(e.target.value))} />
+            <NumberInput value={quantity} onChange={setQuantity} />
           </Field>
           <Field label="Date">
             <Input type="date" value={movedOn} onChange={(e) => setMovedOn(e.target.value)} />
           </Field>
           <Field label="Unit cost (optional)">
-            <Input
-              type="number"
-              step="0.01"
-              min="0"
-              value={unitCost}
-              onChange={(e) => setUnitCost(e.target.value === '' ? '' : Number(e.target.value))}
-            />
+            <NumberInput value={unitCost} onChange={setUnitCost} />
           </Field>
         </div>
         <div className="mt-3 flex items-center gap-2">

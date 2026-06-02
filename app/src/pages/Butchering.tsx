@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import type { CattlePurchase, Product } from '../lib/types'
 import { qty as fmtQty, today } from '../lib/format'
 import { Banner, Button, Card, Field, Input, PageHeader, Select } from '../components/ui'
+import { NumberInput } from '../components/NumberInput'
 
 interface CutLine {
   key: number
@@ -185,14 +186,7 @@ export function Butchering() {
             <Input value={sourceLabel} onChange={(e) => setSourceLabel(e.target.value)} placeholder="e.g. Whole cow" />
           </Field>
           <Field label="Weight in (kg)">
-            <Input
-              type="number"
-              step="0.001"
-              min="0"
-              value={sourceWeight}
-              onChange={(e) => setSourceWeight(e.target.value === '' ? '' : Number(e.target.value))}
-              placeholder="e.g. 200"
-            />
+            <NumberInput value={sourceWeight} onChange={setSourceWeight} placeholder="e.g. 200" />
           </Field>
           <Field label="Date">
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
@@ -240,12 +234,9 @@ export function Butchering() {
                     />
                   </td>
                   <td className="py-2 pr-3">
-                    <Input
-                      type="number"
-                      step="0.001"
-                      min="0"
+                    <NumberInput
                       value={l.weight_kg || ''}
-                      onChange={(e) => setLine(l.key, { weight_kg: Number(e.target.value) })}
+                      onChange={(v) => setLine(l.key, { weight_kg: v === '' ? 0 : v })}
                     />
                   </td>
                   <td className="py-2 text-right">

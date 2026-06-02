@@ -24,6 +24,7 @@ const Products = lazy(() => import('./pages/Products').then((m) => ({ default: m
 const Inventory = lazy(() => import('./pages/Inventory').then((m) => ({ default: m.Inventory })))
 const Butchering = lazy(() => import('./pages/Butchering').then((m) => ({ default: m.Butchering })))
 const Purchases = lazy(() => import('./pages/Purchases').then((m) => ({ default: m.Purchases })))
+const Staff = lazy(() => import('./pages/Staff').then((m) => ({ default: m.Staff })))
 const Expenses = lazy(() => import('./pages/Expenses').then((m) => ({ default: m.Expenses })))
 const Cash = lazy(() => import('./pages/Cash').then((m) => ({ default: m.Cash })))
 const CashCount = lazy(() => import('./pages/CashCount').then((m) => ({ default: m.CashCount })))
@@ -62,6 +63,7 @@ export default function App() {
           <Route path="/inventory" element={<Inventory />} />
           <Route path="/butchering" element={<Butchering />} />
           <Route path="/purchases" element={<Purchases />} />
+          <Route path="/staff" element={<Staff />} />
           <Route path="/expenses" element={<Expenses />} />
           <Route path="/cash" element={<Cash />} />
           <Route path="/loans" element={<Loans />} />

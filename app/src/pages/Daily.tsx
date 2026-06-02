@@ -4,6 +4,7 @@ import { fmtDayLabel, weekday } from '../lib/dates'
 import { today } from '../lib/format'
 import { Button, Card, Input, PageHeader } from '../components/ui'
 import { DayDetail } from '../components/DayDetail'
+import { StoreCheck } from '../components/StoreCheck'
 
 export function Daily() {
   const [date, setDate] = useState(today())
@@ -41,6 +42,10 @@ export function Daily() {
           {weekday(date)} · {fmtDayLabel(date)}, {date.slice(0, 4)}
         </div>
         <DayDetail date={date} />
+      </Card>
+
+      <Card className="print-area mt-4">
+        <StoreCheck date={date} />
       </Card>
     </div>
   )

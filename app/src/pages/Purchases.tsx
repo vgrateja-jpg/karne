@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import type { CattlePurchase, Product, Purchase, Supplier, SupplierBalance } from '../lib/types'
 import { money, qty as fmtQty, today } from '../lib/format'
+import { friendlyError } from '../lib/errors'
 import { Banner, Button, Card, Field, Input, PageHeader, Select } from '../components/ui'
+import { NumberInput } from '../components/NumberInput'
 
 export function Purchases() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
@@ -76,7 +78,7 @@ export function Purchases() {
       .from('suppliers')
       .insert({ name: supName.trim(), opening_balance: supOpening === '' ? 0 : Number(supOpening) })
     setBusy(false)
-    if (error) setError(error.message)
+    if (error) setError(friendlyError(error.message))
     else {
       setSupName('')
       setSupOpening('')
@@ -95,7 +97,7 @@ export function Purchases() {
       .from('supplier_payments')
       .insert({ supplier_id: paySup, amount: Number(payAmt), paid_on: payDate, bank_account_id: payAccount || null })
     setBusy(false)
-    if (error) setError(error.message)
+    if (error) setError(friendlyError(error.message))
     else {
       setPayAmt('')
       load()
@@ -117,7 +119,7 @@ export function Purchases() {
       price_per_kg: Number(cPrice),
     })
     setBusy(false)
-    if (error) setError(error.message)
+    if (error) setError(friendlyError(error.message))
     else {
       setCTag('')
       setCWeight('')
@@ -145,7 +147,7 @@ export function Purchases() {
         const ins = await supabase.from('products').insert({ name, unit: oUnit || 'kg', price: 0 }).select('id').single()
         if (ins.error) {
           setBusy(false)
-          setError(ins.error.message)
+          setError(friendlyError(ins.error.message))
           return
         }
         productId = (ins.data as { id: string }).id
@@ -160,7 +162,7 @@ export function Purchases() {
       p_total_cost: Number(oCost),
     })
     setBusy(false)
-    if (error) setError(error.message)
+    if (error) setError(friendlyError(error.message))
     else {
       setOName('')
       setOQty('')
@@ -239,7 +241,7 @@ export function Purchases() {
               </Select>
             </Field>
             <Field label="Amount">
-              <Input type="number" step="0.01" min="0" value={payAmt} onChange={(e) => setPayAmt(e.target.value === '' ? '' : Number(e.target.value))} />
+              <NumberInput value={payAmt} onChange={setPayAmt} />
             </Field>
             <Field label="Paid from">
               <Select value={payAccount} onChange={(e) => setPayAccount(e.target.value)}>
@@ -261,7 +263,7 @@ export function Purchases() {
               <Input value={supName} onChange={(e) => setSupName(e.target.value)} placeholder="name" />
             </Field>
             <Field label="Opening owed">
-              <Input type="number" step="0.01" value={supOpening} onChange={(e) => setSupOpening(e.target.value === '' ? '' : Number(e.target.value))} />
+              <NumberInput value={supOpening} onChange={setSupOpening} />
             </Field>
             <Button variant="ghost" onClick={addSupplier} disabled={busy || !supName.trim()}>
               + Add
@@ -289,10 +291,10 @@ export function Purchases() {
               </Select>
             </Field>
             <Field label="Weight (kg)">
-              <Input type="number" step="0.001" min="0" value={cWeight} onChange={(e) => setCWeight(e.target.value === '' ? '' : Number(e.target.value))} />
+              <NumberInput value={cWeight} onChange={setCWeight} />
             </Field>
             <Field label="Price / kg">
-              <Input type="number" step="0.01" min="0" value={cPrice} onChange={(e) => setCPrice(e.target.value === '' ? '' : Number(e.target.value))} />
+              <NumberInput value={cPrice} onChange={setCPrice} />
             </Field>
             <Field label="Date">
               <Input type="date" value={cDate} onChange={(e) => setCDate(e.target.value)} />
@@ -341,20 +343,12 @@ export function Purchases() {
             </Field>
             <Field label="Quantity (optional)">
               <div className="flex gap-1">
-                <Input
-                  type="number"
-                  step="0.001"
-                  min="0"
-                  value={oQty}
-                  onChange={(e) => setOQty(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="flex-1"
-                  placeholder="qty"
-                />
+                <NumberInput value={oQty} onChange={setOQty} className="flex-1" placeholder="qty" />
                 <Input list="other-units" value={oUnit} onChange={(e) => setOUnit(e.target.value)} className="w-16" />
               </div>
             </Field>
             <Field label="Total cost">
-              <Input type="number" step="0.01" min="0" value={oCost} onChange={(e) => setOCost(e.target.value === '' ? '' : Number(e.target.value))} />
+              <NumberInput value={oCost} onChange={setOCost} />
             </Field>
           </div>
           <p className="mt-2 text-xs text-slate-400">

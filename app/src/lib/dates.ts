@@ -34,6 +34,14 @@ export function addDays(iso: string, n: number): string {
   return d.toISOString().slice(0, 10)
 }
 
+// Monday–Sunday week containing the given date.
+export function weekRange(iso: string): { from: string; to: string } {
+  const d = new Date(iso + 'T12:00:00Z')
+  const sinceMonday = (d.getUTCDay() + 6) % 7 // 0 = Mon … 6 = Sun
+  const from = addDays(iso, -sinceMonday)
+  return { from, to: addDays(from, 6) }
+}
+
 export const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 

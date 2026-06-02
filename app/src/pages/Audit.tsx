@@ -22,6 +22,7 @@ const ENTITY_LABEL: Record<string, string> = {
   bank_accounts: 'Account', bank_transactions: 'Cash movement', cash_counts: 'Cash count',
   expenses: 'Expense', checks: 'Cheque', loans: 'Loan', loan_transactions: 'Loan entry',
   branches: 'Branch', app_settings: 'Settings', sms_senders: 'SMS sender',
+  staff: 'Staff', store_checks: 'Store check', inventory_snapshots: 'Stock value',
 }
 const VERB: Record<string, string> = { insert: 'Created', update: 'Updated', delete: 'Deleted' }
 const CAT_STYLE: Record<string, string> = {

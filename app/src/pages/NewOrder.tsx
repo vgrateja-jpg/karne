@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import type { Branch, Customer, OrderChannel, Product } from '../lib/types'
 import { money, qty as fmtQty, today } from '../lib/format'
 import { Banner, Button, Card, Field, Input, PageHeader, Select } from '../components/ui'
+import { NumberInput } from '../components/NumberInput'
 
 interface Line {
   key: number
@@ -195,23 +196,17 @@ export function NewOrder() {
                     </td>
                     <td className="py-2 pr-3">
                       <div className="flex items-center gap-1">
-                        <Input
-                          type="number"
-                          step="0.001"
-                          min="0"
+                        <NumberInput
                           value={l.quantity || ''}
-                          onChange={(e) => setLine(l.key, { quantity: Number(e.target.value) })}
+                          onChange={(v) => setLine(l.key, { quantity: v === '' ? 0 : v })}
                         />
                         <span className="text-xs text-slate-400">{p?.unit ?? ''}</span>
                       </div>
                     </td>
                     <td className="py-2 pr-3">
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
+                      <NumberInput
                         value={l.unit_price || ''}
-                        onChange={(e) => setLine(l.key, { unit_price: Number(e.target.value) })}
+                        onChange={(v) => setLine(l.key, { unit_price: v === '' ? 0 : v })}
                       />
                     </td>
                     <td className="py-2 pr-3 text-right tabular-nums">{money(lineTotal)}</td>

@@ -40,7 +40,7 @@ export function Dashboard() {
       const { from, to } = monthRange(now.getFullYear(), now.getMonth())
 
       const [ordersRes, balRes, acctRes, dailyRes, expRes, cattleRes, purchRes, supRes] = await Promise.all([
-        supabase.from('orders').select('id').eq('order_date', d),
+        supabase.from('orders').select('id').eq('order_date', d).neq('status', 'void'),
         supabase.from('v_customer_balance').select('customer_id,balance'),
         supabase.from('v_account_balance').select('balance'),
         supabase.rpc('report_daily', { p_from: from, p_to: to }),

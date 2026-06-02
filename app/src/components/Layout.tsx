@@ -37,6 +37,7 @@ const groups: NavGroup[] = [
     items: [
       { to: '/customers', label: 'Customers', icon: '👥' },
       { to: '/purchases', label: 'Suppliers', icon: '🚚' },
+      { to: '/staff', label: 'Staff & salaries', icon: '🧑‍🍳' },
     ],
   },
   {
