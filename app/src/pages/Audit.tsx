@@ -216,7 +216,18 @@ export function Audit() {
                       {VERB[r.action] ?? r.action} {ENTITY_LABEL[r.entity] ?? r.entity}
                     </td>
                     <td className="py-2 pr-3 text-slate-500">{detail(r.row_data)}</td>
-                    <td className="py-2 pr-3 text-slate-400">{(r.actor && names[r.actor]) || r.actor_email || 'System'}</td>
+                    <td className="py-2 pr-3">
+                      {(() => {
+                        const name = r.actor ? names[r.actor] : undefined
+                        if (!name && !r.actor_email) return <span className="text-slate-400">System</span>
+                        return (
+                          <div className="leading-tight">
+                            <div className="text-slate-600">{name || r.actor_email}</div>
+                            {name && r.actor_email && <div className="text-[11px] text-slate-400">{r.actor_email}</div>}
+                          </div>
+                        )
+                      })()}
+                    </td>
                   </tr>
                 ))}
               </tbody>

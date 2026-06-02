@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import type { Customer, Product } from '../lib/types'
-import { money } from '../lib/format'
+import { money, phDate } from '../lib/format'
 import { Banner, Button, Card, PageHeader, Select } from '../components/ui'
 
 interface ParsedItem {
@@ -52,7 +52,7 @@ export function Inbox() {
 
   return (
     <div>
-      <PageHeader title={`Text orders${rows.length ? ` (${rows.length})` : ''}`} />
+      <PageHeader title={`Text Orders${rows.length ? ` (${rows.length})` : ''}`} />
       {error && (
         <div className="mb-3">
           <Banner kind="error">{error}</Banner>
@@ -158,7 +158,7 @@ function InboxItem({
     setBusy(true)
     const { data, error } = await supabase.rpc('create_order', {
       p_customer: customerId || null,
-      p_order_date: new Date(row.received_at).toISOString().slice(0, 10),
+      p_order_date: phDate(new Date(row.received_at)),
       p_channel: 'sms',
       p_notes: `From SMS: "${row.raw_text.slice(0, 140)}"`,
       p_items: valid.map((l) => ({ product_id: l.product_id, quantity: l.quantity, unit_price: l.unit_price })),

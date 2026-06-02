@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { money } from '../lib/format'
+import { money, today } from '../lib/format'
 import { MONTHS_SHORT, monthRange, quarterMonths, quarterRange, yearRange } from '../lib/dates'
 import { Card, PageHeader } from '../components/ui'
 
@@ -28,7 +28,7 @@ function Summary({ p }: { p?: Period }) {
 
 export function History() {
   const navigate = useNavigate()
-  const nowY = new Date().getFullYear()
+  const nowY = Number(today().slice(0, 4))
   const [years, setYears] = useState<number[]>([])
   const [openYear, setOpenYear] = useState<number | null>(nowY)
   const [openQ, setOpenQ] = useState<string | null>(null)

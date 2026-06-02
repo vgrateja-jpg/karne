@@ -63,7 +63,7 @@ export function Profile() {
 
   return (
     <div>
-      <PageHeader title="My profile" />
+      <PageHeader title="My Profile" />
 
       <Card className="mb-4 max-w-xl">
         <div className="mb-1 text-sm font-medium text-slate-700">Your name</div>

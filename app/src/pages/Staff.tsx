@@ -229,7 +229,7 @@ export function Staff() {
   return (
     <div>
       <PageHeader
-        title="Staff & salaries"
+        title="Staff & Salaries"
         action={<Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-40" />}
       />
       {error && (

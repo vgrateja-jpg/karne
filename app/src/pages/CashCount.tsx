@@ -97,7 +97,7 @@ export function CashCount() {
   return (
     <div>
       <PageHeader
-        title="Cash count (end of day)"
+        title="Cash Count (end of day)"
         action={<Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-40" />}
       />
       {error && (

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 
 interface NavItem {
@@ -7,7 +7,12 @@ interface NavItem {
   label: string
   icon: string
   end?: boolean
+  staff?: boolean // visible to the staff role (everything else is owner/dev only)
 }
+
+// Paths a staff member may open directly (everything else redirects them).
+const STAFF_PREFIXES = ['/orders', '/inbox', '/delivery', '/inventory', '/butchering', '/profile']
+const staffCanOpen = (path: string) => STAFF_PREFIXES.some((p) => path === p || path.startsWith(p + '/'))
 interface NavGroup {
   title: string
   items: NavItem[]
@@ -18,18 +23,18 @@ const groups: NavGroup[] = [
     title: 'Daily',
     items: [
       { to: '/', label: 'Home', icon: '🏠', end: true },
-      { to: '/orders/new', label: 'New order', icon: '✍️' },
-      { to: '/inbox', label: 'Text orders', icon: '📩' },
-      { to: '/orders', label: 'Orders', icon: '🧾' },
-      { to: '/delivery', label: 'Deliveries', icon: '🚛' },
+      { to: '/orders/new', label: 'New Order', icon: '✍️', staff: true },
+      { to: '/inbox', label: 'Text Orders', icon: '📩', staff: true },
+      { to: '/orders', label: 'Orders', icon: '🧾', staff: true },
+      { to: '/delivery', label: 'Deliveries', icon: '🚛', staff: true },
     ],
   },
   {
     title: 'Stock',
     items: [
-      { to: '/butchering', label: 'Butchering', icon: '🔪' },
+      { to: '/butchering', label: 'Butchering', icon: '🔪', staff: true },
       { to: '/products', label: 'Prices', icon: '🏷️' },
-      { to: '/inventory', label: 'Stock', icon: '📦' },
+      { to: '/inventory', label: 'Stock', icon: '📦', staff: true },
     ],
   },
   {
@@ -37,14 +42,14 @@ const groups: NavGroup[] = [
     items: [
       { to: '/customers', label: 'Customers', icon: '👥' },
       { to: '/purchases', label: 'Suppliers', icon: '🚚' },
-      { to: '/staff', label: 'Staff & salaries', icon: '🧑‍🍳' },
+      { to: '/staff', label: 'Staff & Salaries', icon: '🧑‍🍳' },
     ],
   },
   {
     title: 'Money',
     items: [
       { to: '/cash', label: 'Cash & Banks', icon: '💵' },
-      { to: '/cashcount', label: 'Cash count', icon: '🧮' },
+      { to: '/cashcount', label: 'Cash Count', icon: '🧮' },
       { to: '/receivables', label: 'Receivables', icon: '📥' },
       { to: '/expenses', label: 'Expenses', icon: '💸' },
       { to: '/checks', label: 'Cheques', icon: '💳' },
@@ -58,16 +63,23 @@ const groups: NavGroup[] = [
       { to: '/month', label: 'Monthly Report', icon: '📊' },
       { to: '/history', label: 'Historical', icon: '🗂️' },
       { to: '/audit', label: 'Audit Trail', icon: '📜' },
-      { to: '/profile', label: 'My profile', icon: '👤' },
+      { to: '/profile', label: 'My Profile', icon: '👤', staff: true },
       { to: '/settings', label: 'Settings', icon: '⚙️' },
     ],
   },
 ]
 
 export function Layout() {
-  const { signOut, session } = useAuth()
+  const { signOut, session, isOwner } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [open, setOpen] = useState(false)
+
+  // Staff see only their operational tools; owner/dev see everything.
+  const visibleGroups = groups
+    .map((g) => ({ ...g, items: isOwner ? g.items : g.items.filter((i) => i.staff) }))
+    .filter((g) => g.items.length > 0)
+  const blocked = !isOwner && !staffCanOpen(location.pathname)
 
   async function handleSignOut() {
     await signOut()
@@ -80,7 +92,7 @@ export function Layout() {
         <span className="text-xl font-bold tracking-tight text-rose-600">🥩 Karne</span>
       </div>
       <nav className="flex-1 overflow-y-auto px-3 pb-2">
-        {groups.map((g) => (
+        {visibleGroups.map((g) => (
           <div key={g.title} className="mb-3">
             <div className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
               {g.title}
@@ -146,7 +158,7 @@ export function Layout() {
       {/* content */}
       <main className="px-4 py-6 md:ml-60 print:ml-0">
         <div className="mx-auto max-w-5xl">
-          <Outlet />
+          {blocked ? <Navigate to="/orders/new" replace /> : <Outlet />}
         </div>
       </main>
     </div>

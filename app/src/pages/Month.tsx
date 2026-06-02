@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { money, qty as fmtQty } from '../lib/format'
+import { money, qty as fmtQty, today } from '../lib/format'
 import { addMonth, fmtDayLabel, monthLabel, monthRange, weekday } from '../lib/dates'
 import { fetchSettings, type AppSettings } from '../lib/settings'
 import type { Branch } from '../lib/types'
@@ -32,10 +32,10 @@ interface CustomerRow {
 
 export function Month() {
   const [params] = useSearchParams()
-  const now = new Date()
+  const t = today()
   const ym = params.get('ym') // 'YYYY-MM'
-  const [year, setYear] = useState(ym ? Number(ym.slice(0, 4)) : now.getFullYear())
-  const [month, setMonth] = useState(ym ? Number(ym.slice(5, 7)) - 1 : now.getMonth())
+  const [year, setYear] = useState(ym ? Number(ym.slice(0, 4)) : Number(t.slice(0, 4)))
+  const [month, setMonth] = useState(ym ? Number(ym.slice(5, 7)) - 1 : Number(t.slice(5, 7)) - 1)
   const [daily, setDaily] = useState<DailyRow[]>([])
   const [byProduct, setByProduct] = useState<ProductRow[]>([])
   const [byCustomer, setByCustomer] = useState<CustomerRow[]>([])

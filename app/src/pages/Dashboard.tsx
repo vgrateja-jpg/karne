@@ -36,8 +36,7 @@ export function Dashboard() {
     async function load() {
       setLoading(true)
       const d = today()
-      const now = new Date()
-      const { from, to } = monthRange(now.getFullYear(), now.getMonth())
+      const { from, to } = monthRange(Number(d.slice(0, 4)), Number(d.slice(5, 7)) - 1)
 
       const [ordersRes, balRes, acctRes, dailyRes, expRes, cattleRes, purchRes, supRes] = await Promise.all([
         supabase.from('orders').select('id').eq('order_date', d).neq('status', 'void'),

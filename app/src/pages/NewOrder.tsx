@@ -109,7 +109,7 @@ export function NewOrder() {
 
   return (
     <div>
-      <PageHeader title="New order" />
+      <PageHeader title="New Order" />
       {error && (
         <div className="mb-3">
           <Banner kind="error">{error}</Banner>
