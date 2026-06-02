@@ -20,6 +20,7 @@ export function Purchases() {
   // new supplier
   const [supName, setSupName] = useState('')
   const [supOpening, setSupOpening] = useState<number | ''>('')
+  const [editSup, setEditSup] = useState<{ id: string; name: string; opening_balance: number | '' } | null>(null)
 
   // supplier payment
   const [paySup, setPaySup] = useState('')
@@ -178,6 +179,36 @@ export function Purchases() {
     }
   }
 
+  async function saveSupplier() {
+    if (!editSup) return
+    setError(null)
+    const { error } = await supabase
+      .from('suppliers')
+      .update({ name: editSup.name.trim(), opening_balance: Number(editSup.opening_balance) || 0 })
+      .eq('id', editSup.id)
+    if (error) setError(friendlyError(error.message))
+    else {
+      setEditSup(null)
+      load()
+    }
+  }
+  async function deleteSupplier(id: string, name: string) {
+    if (!window.confirm(`Delete supplier "${name}"?`)) return
+    setError(null)
+    const [pc, cc, spc] = await Promise.all([
+      supabase.from('purchases').select('id', { count: 'exact', head: true }).eq('supplier_id', id),
+      supabase.from('cattle_purchases').select('id', { count: 'exact', head: true }).eq('supplier_id', id),
+      supabase.from('supplier_payments').select('id', { count: 'exact', head: true }).eq('supplier_id', id),
+    ])
+    if ((pc.count ?? 0) + (cc.count ?? 0) + (spc.count ?? 0) > 0) {
+      setError(`Can't delete "${name}" — it has purchases or payments on record. Edit it instead.`)
+      return
+    }
+    const { error } = await supabase.from('suppliers').delete().eq('id', id)
+    if (error) setError(friendlyError(error.message))
+    else load()
+  }
+
   async function removeCattle(id: string) {
     if (!window.confirm('Delete this cattle purchase?')) return
     const { error } = await supabase.from('cattle_purchases').delete().eq('id', id)
@@ -231,6 +262,22 @@ export function Purchases() {
             <span className="font-semibold tabular-nums text-rose-600">{money(totalPayable)}</span>
           </span>
         </div>
+        {editSup && (
+          <div className="mb-3 grid grid-cols-1 gap-2 rounded-lg border border-slate-200 p-3 sm:grid-cols-[1fr_1fr_auto_auto] sm:items-end">
+            <Field label="Supplier name">
+              <Input value={editSup.name} onChange={(e) => setEditSup({ ...editSup, name: e.target.value })} />
+            </Field>
+            <Field label="Opening owed">
+              <NumberInput value={editSup.opening_balance} onChange={(v) => setEditSup({ ...editSup, opening_balance: v })} />
+            </Field>
+            <Button onClick={saveSupplier} disabled={!editSup.name.trim()}>
+              Save
+            </Button>
+            <Button variant="ghost" onClick={() => setEditSup(null)}>
+              Cancel
+            </Button>
+          </div>
+        )}
         {balances.length > 0 && (
           <div className="mb-3 overflow-x-auto">
             <table className="w-full text-sm">
@@ -238,6 +285,7 @@ export function Purchases() {
                 <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500">
                   <th className="py-2 pr-3">Supplier</th>
                   <th className="py-2 pr-3 text-right">Balance owed</th>
+                  <th className="py-2"></th>
                 </tr>
               </thead>
               <tbody>
@@ -246,6 +294,25 @@ export function Purchases() {
                     <td className="py-2 pr-3 font-medium text-slate-800">{b.name}</td>
                     <td className={`py-2 pr-3 text-right tabular-nums ${b.balance > 0 ? 'text-rose-600' : 'text-slate-700'}`}>
                       {money(b.balance)}
+                    </td>
+                    <td className="py-2 text-right">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() =>
+                            setEditSup({
+                              id: b.supplier_id,
+                              name: b.name,
+                              opening_balance: suppliers.find((x) => x.id === b.supplier_id)?.opening_balance ?? 0,
+                            })
+                          }
+                          className="text-xs text-slate-400 hover:text-rose-600"
+                        >
+                          Edit
+                        </button>
+                        <button onClick={() => deleteSupplier(b.supplier_id, b.name)} className="text-xs text-slate-400 hover:text-red-600">
+                          Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

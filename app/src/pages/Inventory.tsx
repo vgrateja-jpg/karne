@@ -23,6 +23,8 @@ export function Inventory() {
   >([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [editMove, setEditMove] = useState<{ id: string; quantity: number | '' } | null>(null)
+  const [adjust, setAdjust] = useState<{ product_id: string; quantity: number | '' } | null>(null)
 
   // quick "record stock in" form
   const [productId, setProductId] = useState('')
@@ -87,6 +89,41 @@ export function Inventory() {
     if (error) setError(error.message)
     else load()
   }
+  async function saveMove() {
+    if (!editMove) return
+    const { error } = await supabase
+      .from('inventory_movements')
+      .update({ quantity: Number(editMove.quantity) || 0 })
+      .eq('id', editMove.id)
+    if (error) setError(error.message)
+    else {
+      setEditMove(null)
+      load()
+    }
+  }
+
+  // Correct a physical count: record an adjustment so on-hand becomes the typed number.
+  async function saveAdjust() {
+    if (!adjust) return
+    const current = Number(stock.find((s) => s.product_id === adjust.product_id)?.on_hand ?? 0)
+    const target = Number(adjust.quantity) || 0
+    const diff = target - current
+    if (Math.abs(diff) > 0.0001) {
+      const { error } = await supabase.from('inventory_movements').insert({
+        product_id: adjust.product_id,
+        moved_on: today(),
+        type: 'adjustment',
+        quantity: diff,
+        reference: 'count adjustment',
+      })
+      if (error) {
+        setError(error.message)
+        return
+      }
+    }
+    setAdjust(null)
+    load()
+  }
 
   const priceById: Record<string, number> = Object.fromEntries(products.map((p) => [p.id, p.price]))
   const totalValue = stock.reduce((s, r) => s + r.on_hand * (priceById[r.product_id] ?? 0), 0)
@@ -150,18 +187,49 @@ export function Inventory() {
                   <th className="py-2 pr-3 text-right">On hand</th>
                   <th className="py-2 pr-3">Unit</th>
                   <th className="py-2 pr-3 text-right">Value (at price)</th>
+                  <th className="py-2"></th>
                 </tr>
               </thead>
               <tbody>
                 {stock.map((s) => (
                   <tr key={s.product_id} className="border-b border-slate-100 last:border-0">
                     <td className="py-2 pr-3 font-medium text-slate-800">{s.name}</td>
-                    <td className={`py-2 pr-3 text-right tabular-nums ${s.on_hand < 0 ? 'text-rose-600' : 'text-slate-700'}`}>
-                      {fmtQty(s.on_hand)}
+                    <td className="py-2 pr-3 text-right">
+                      {adjust?.product_id === s.product_id ? (
+                        <NumberInput
+                          value={adjust.quantity}
+                          onChange={(v) => setAdjust({ ...adjust, quantity: v })}
+                          className="w-24 text-right"
+                        />
+                      ) : (
+                        <span className={`tabular-nums ${s.on_hand < 0 ? 'text-rose-600' : 'text-slate-700'}`}>
+                          {fmtQty(s.on_hand)}
+                        </span>
+                      )}
                     </td>
                     <td className="py-2 pr-3 text-slate-500">{s.unit}</td>
                     <td className="py-2 pr-3 text-right tabular-nums text-slate-600">
                       {money(s.on_hand * (priceById[s.product_id] ?? 0))}
+                    </td>
+                    <td className="py-2 text-right">
+                      {adjust?.product_id === s.product_id ? (
+                        <div className="flex justify-end gap-2">
+                          <button onClick={saveAdjust} className="text-emerald-600 hover:text-emerald-700" title="Save count">
+                            ✓
+                          </button>
+                          <button onClick={() => setAdjust(null)} className="text-slate-400 hover:text-red-600" title="Cancel">
+                            ✕
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setAdjust({ product_id: s.product_id, quantity: s.on_hand })}
+                          className="text-xs text-slate-400 hover:text-rose-600"
+                          title="Set the counted quantity"
+                        >
+                          Set count
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -195,16 +263,44 @@ export function Inventory() {
                       <td className="py-2 pr-3 tabular-nums text-slate-500">{mv.moved_on}</td>
                       <td className="py-2 pr-3 text-slate-800">{mv.product?.name ?? '—'}</td>
                       <td className="py-2 pr-3 text-slate-500">{linked ?? mv.reference ?? mv.type}</td>
-                      <td className={`py-2 pr-3 text-right tabular-nums ${mv.quantity < 0 ? 'text-rose-600' : 'text-slate-700'}`}>
-                        {fmtQty(mv.quantity)}
+                      <td className="py-2 pr-3 text-right">
+                        {editMove?.id === mv.id ? (
+                          <NumberInput
+                            value={editMove.quantity}
+                            onChange={(v) => setEditMove({ ...editMove, quantity: v })}
+                            className="w-24 text-right"
+                          />
+                        ) : (
+                          <span className={`tabular-nums ${mv.quantity < 0 ? 'text-rose-600' : 'text-slate-700'}`}>
+                            {fmtQty(mv.quantity)}
+                          </span>
+                        )}
                       </td>
                       <td className="py-2 text-right">
                         {linked ? (
-                          <span className="text-xs text-slate-300" title={`Delete from the ${linked} instead`}>—</span>
+                          <span className="text-xs text-slate-300" title={`Fix from the ${linked} instead`}>—</span>
+                        ) : editMove?.id === mv.id ? (
+                          <div className="flex justify-end gap-2">
+                            <button onClick={saveMove} className="text-emerald-600 hover:text-emerald-700" title="Save">
+                              ✓
+                            </button>
+                            <button onClick={() => setEditMove(null)} className="text-slate-400 hover:text-red-600" title="Cancel">
+                              ✕
+                            </button>
+                          </div>
                         ) : (
-                          <button onClick={() => removeMove(mv.id)} className="text-slate-400 hover:text-red-600" title="Delete">
-                            ✕
-                          </button>
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => setEditMove({ id: mv.id, quantity: mv.quantity })}
+                              className="text-slate-400 hover:text-rose-600"
+                              title="Edit quantity"
+                            >
+                              ✎
+                            </button>
+                            <button onClick={() => removeMove(mv.id)} className="text-slate-400 hover:text-red-600" title="Delete">
+                              ✕
+                            </button>
+                          </div>
                         )}
                       </td>
                     </tr>

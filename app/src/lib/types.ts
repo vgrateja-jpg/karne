@@ -129,6 +129,7 @@ export interface Supplier {
   phone: string | null
   notes: string | null
   is_active: boolean
+  opening_balance: number
 }
 
 export interface CattlePurchase {
