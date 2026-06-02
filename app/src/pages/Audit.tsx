@@ -7,6 +7,7 @@ import { Banner, Button, Card, Input, PageHeader } from '../components/ui'
 interface Audit {
   id: number
   occurred_at: string
+  actor: string | null
   actor_email: string | null
   action: string
   category: string
@@ -52,8 +53,23 @@ export function Audit() {
   const [histYear, setHistYear] = useState(now.getFullYear())
   const [category, setCategory] = useState('All')
   const [rows, setRows] = useState<Audit[]>([])
+  const [names, setNames] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // map of user id → display name (full_name), so the trail shows names not emails
+  useEffect(() => {
+    supabase
+      .from('profiles')
+      .select('id, full_name')
+      .then(({ data }) => {
+        const m: Record<string, string> = {}
+        for (const p of (data ?? []) as { id: string; full_name: string | null }[]) {
+          if (p.full_name) m[p.id] = p.full_name
+        }
+        setNames(m)
+      })
+  }, [])
 
   useEffect(() => {
     async function load() {
@@ -74,7 +90,7 @@ export function Audit() {
       }
       let q = supabase
         .from('audit_log')
-        .select('id, occurred_at, actor_email, action, category, entity, row_data')
+        .select('id, occurred_at, actor, actor_email, action, category, entity, row_data')
         .gte('occurred_at', `${from}T00:00:00`)
         .lte('occurred_at', `${to}T23:59:59.999`)
         .order('occurred_at', { ascending: false })
@@ -200,7 +216,7 @@ export function Audit() {
                       {VERB[r.action] ?? r.action} {ENTITY_LABEL[r.entity] ?? r.entity}
                     </td>
                     <td className="py-2 pr-3 text-slate-500">{detail(r.row_data)}</td>
-                    <td className="py-2 pr-3 text-slate-400">{r.actor_email ?? 'System'}</td>
+                    <td className="py-2 pr-3 text-slate-400">{(r.actor && names[r.actor]) || r.actor_email || 'System'}</td>
                   </tr>
                 ))}
               </tbody>

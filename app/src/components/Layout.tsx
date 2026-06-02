@@ -58,6 +58,7 @@ const groups: NavGroup[] = [
       { to: '/month', label: 'Monthly Report', icon: '📊' },
       { to: '/history', label: 'Historical', icon: '🗂️' },
       { to: '/audit', label: 'Audit Trail', icon: '📜' },
+      { to: '/profile', label: 'My profile', icon: '👤' },
       { to: '/settings', label: 'Settings', icon: '⚙️' },
     ],
   },

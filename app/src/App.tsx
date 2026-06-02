@@ -31,6 +31,7 @@ const CashCount = lazy(() => import('./pages/CashCount').then((m) => ({ default:
 const Loans = lazy(() => import('./pages/Loans').then((m) => ({ default: m.Loans })))
 const Checks = lazy(() => import('./pages/Checks').then((m) => ({ default: m.Checks })))
 const Settings = lazy(() => import('./pages/Settings').then((m) => ({ default: m.Settings })))
+const Profile = lazy(() => import('./pages/Profile').then((m) => ({ default: m.Profile })))
 
 export default function App() {
   return (
@@ -68,6 +69,7 @@ export default function App() {
           <Route path="/cash" element={<Cash />} />
           <Route path="/loans" element={<Loans />} />
           <Route path="/checks" element={<Checks />} />
+          <Route path="/profile" element={<Profile />} />
           <Route path="/settings" element={<Settings />} />
         </Route>
       </Routes>
