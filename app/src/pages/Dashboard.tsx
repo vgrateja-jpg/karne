@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import type { AccountBalance, CustomerBalance } from '../lib/types'
 import { money, today } from '../lib/format'
-import { monthRange } from '../lib/dates'
+import { fmtDayLabel, monthRange, weekday } from '../lib/dates'
 import { Banner, Button, Card, PageHeader } from '../components/ui'
 
 function Stat({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: 'good' | 'bad' }) {
@@ -32,8 +32,7 @@ export function Dashboard() {
     purchasesMonth: 0,
   })
 
-  useEffect(() => {
-    async function load() {
+  const load = useCallback(async () => {
       setLoading(true)
       const d = today()
       const { from, to } = monthRange(Number(d.slice(0, 4)), Number(d.slice(5, 7)) - 1)
@@ -85,12 +84,30 @@ export function Dashboard() {
         purchasesMonth,
       })
       setLoading(false)
-    }
-    load()
   }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  // Re-pull when the tab/window regains focus, so a dashboard left open overnight
+  // refreshes to the new (Philippine) day instead of showing yesterday's numbers.
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === 'visible') load()
+    }
+    document.addEventListener('visibilitychange', refresh)
+    window.addEventListener('focus', refresh)
+    return () => {
+      document.removeEventListener('visibilitychange', refresh)
+      window.removeEventListener('focus', refresh)
+    }
+  }, [load])
 
   const v = (n: number) => (loading ? '…' : money(n))
   const profit = m.salesMonth - m.expensesMonth - m.purchasesMonth
+  const t = today()
+  const todayLabel = `${weekday(t)}, ${fmtDayLabel(t)} ${t.slice(0, 4)}`
 
   return (
     <div>
@@ -109,7 +126,7 @@ export function Dashboard() {
       )}
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Sales today" value={v(m.salesToday)} sub={`${m.ordersToday} order(s) today`} />
+        <Stat label="Sales today" value={v(m.salesToday)} sub={`${todayLabel} · ${m.ordersToday} order(s)`} />
         <Stat label="Money owed to you" value={v(m.receivables)} sub={`${m.owing} customer(s)`} tone="bad" />
         <Stat label="Money you owe" value={v(m.payables)} sub="to suppliers" tone="bad" />
         <Stat label="Cash on hand" value={v(m.cashOnHand)} sub="across all accounts" />
