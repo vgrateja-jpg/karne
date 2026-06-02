@@ -8,6 +8,19 @@ import { NumberInput } from '../components/NumberInput'
 export function Inventory() {
   const [stock, setStock] = useState<ProductStock[]>([])
   const [products, setProducts] = useState<Product[]>([])
+  const [moves, setMoves] = useState<
+    {
+      id: string
+      moved_on: string
+      type: string
+      quantity: number
+      reference: string | null
+      order_id: string | null
+      breakdown_id: string | null
+      purchase_id: string | null
+      product: { name: string } | null
+    }[]
+  >([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -21,13 +34,20 @@ export function Inventory() {
 
   async function load() {
     setLoading(true)
-    const [s, p] = await Promise.all([
+    const [s, p, mv] = await Promise.all([
       supabase.from('v_product_stock').select('*').order('name'),
       supabase.from('products').select('*').eq('is_active', true).order('sort_order').order('name'),
+      supabase
+        .from('inventory_movements')
+        .select('id,moved_on,type,quantity,reference,order_id,breakdown_id,purchase_id,product:products(name)')
+        .order('moved_on', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(50),
     ])
     if (s.error) setError(s.error.message)
     else setStock((s.data ?? []) as ProductStock[])
     if (p.data) setProducts(p.data as Product[])
+    if (mv.data) setMoves(mv.data as unknown as typeof moves)
     setLoading(false)
   }
 
@@ -59,6 +79,13 @@ export function Inventory() {
       setUnitCost('')
       load()
     }
+  }
+
+  async function removeMove(id: string) {
+    if (!window.confirm('Delete this stock movement?')) return
+    const { error } = await supabase.from('inventory_movements').delete().eq('id', id)
+    if (error) setError(error.message)
+    else load()
   }
 
   const priceById: Record<string, number> = Object.fromEntries(products.map((p) => [p.id, p.price]))
@@ -142,6 +169,54 @@ export function Inventory() {
             </table>
           </div>
         )}
+      </Card>
+
+      <Card className="mt-4">
+        <div className="mb-2 text-sm font-medium text-slate-700">Recent stock movements</div>
+        {moves.length === 0 ? (
+          <div className="py-3 text-center text-sm text-slate-400">No movements yet.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500">
+                  <th className="py-2 pr-3">Date</th>
+                  <th className="py-2 pr-3">Product</th>
+                  <th className="py-2 pr-3">From</th>
+                  <th className="py-2 pr-3 text-right">Qty</th>
+                  <th className="py-2"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {moves.map((mv) => {
+                  const linked = mv.order_id ? 'sale' : mv.breakdown_id ? 'butchering' : mv.purchase_id ? 'purchase' : null
+                  return (
+                    <tr key={mv.id} className="border-b border-slate-100 last:border-0">
+                      <td className="py-2 pr-3 tabular-nums text-slate-500">{mv.moved_on}</td>
+                      <td className="py-2 pr-3 text-slate-800">{mv.product?.name ?? '—'}</td>
+                      <td className="py-2 pr-3 text-slate-500">{linked ?? mv.reference ?? mv.type}</td>
+                      <td className={`py-2 pr-3 text-right tabular-nums ${mv.quantity < 0 ? 'text-rose-600' : 'text-slate-700'}`}>
+                        {fmtQty(mv.quantity)}
+                      </td>
+                      <td className="py-2 text-right">
+                        {linked ? (
+                          <span className="text-xs text-slate-300" title={`Delete from the ${linked} instead`}>—</span>
+                        ) : (
+                          <button onClick={() => removeMove(mv.id)} className="text-slate-400 hover:text-red-600" title="Delete">
+                            ✕
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <p className="mt-2 text-[11px] text-slate-400">
+          Movements from a sale, butchering, or purchase are removed by deleting that order / butchering / purchase.
+        </p>
       </Card>
     </div>
   )

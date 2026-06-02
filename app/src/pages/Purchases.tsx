@@ -12,6 +12,7 @@ export function Purchases() {
   const [cattle, setCattle] = useState<CattlePurchase[]>([])
   const [other, setOther] = useState<Purchase[]>([])
   const [products, setProducts] = useState<Product[]>([])
+  const [payments, setPayments] = useState<{ id: string; paid_on: string; amount: number; supplier: { name: string } | null }[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -44,13 +45,18 @@ export function Purchases() {
 
   async function load() {
     setLoading(true)
-    const [s, b, c, o, pr, a] = await Promise.all([
+    const [s, b, c, o, pr, a, sp] = await Promise.all([
       supabase.from('suppliers').select('*').eq('is_active', true).order('name'),
       supabase.from('v_supplier_balance').select('*').order('name'),
       supabase.from('cattle_purchases').select('*').order('purchased_on', { ascending: false }).limit(100),
       supabase.from('purchases').select('*').order('purchased_on', { ascending: false }).limit(100),
       supabase.from('products').select('*').eq('is_active', true).order('sort_order').order('name'),
       supabase.from('bank_accounts').select('id,name,type').eq('is_active', true).order('name'),
+      supabase
+        .from('supplier_payments')
+        .select('id,paid_on,amount,supplier:suppliers(name)')
+        .order('paid_on', { ascending: false })
+        .limit(100),
     ])
     if (s.error) setError(s.error.message)
     else setSuppliers((s.data ?? []) as Supplier[])
@@ -58,6 +64,7 @@ export function Purchases() {
     if (c.data) setCattle(c.data as CattlePurchase[])
     if (o.data) setOther(o.data as Purchase[])
     if (pr.data) setProducts(pr.data as Product[])
+    if (sp.data) setPayments(sp.data as unknown as typeof payments)
     if (a.data) {
       const accs = a.data as { id: string; name: string; type: string }[]
       setAccounts(accs)
@@ -169,6 +176,25 @@ export function Purchases() {
       setOCost('')
       load()
     }
+  }
+
+  async function removeCattle(id: string) {
+    if (!window.confirm('Delete this cattle purchase?')) return
+    const { error } = await supabase.from('cattle_purchases').delete().eq('id', id)
+    if (error) setError(friendlyError(error.message))
+    else load()
+  }
+  async function removeOther(id: string) {
+    if (!window.confirm('Delete this purchase? Any stock it added is removed too.')) return
+    const { error } = await supabase.from('purchases').delete().eq('id', id)
+    if (error) setError(friendlyError(error.message))
+    else load()
+  }
+  async function removePayment(id: string) {
+    if (!window.confirm('Delete this supplier payment?')) return
+    const { error } = await supabase.from('supplier_payments').delete().eq('id', id)
+    if (error) setError(friendlyError(error.message))
+    else load()
   }
 
   const month = today().slice(0, 7)
@@ -377,6 +403,7 @@ export function Purchases() {
                   <th className="py-2 pr-3">What</th>
                   <th className="py-2 pr-3">Supplier</th>
                   <th className="py-2 pr-3 text-right">Cost</th>
+                  <th className="py-2"></th>
                 </tr>
               </thead>
               <tbody>
@@ -391,6 +418,11 @@ export function Purchases() {
                     </td>
                     <td className="py-2 pr-3 text-slate-500">{supName_(c.supplier_id)}</td>
                     <td className="py-2 pr-3 text-right tabular-nums">{money(c.total_cost)}</td>
+                    <td className="py-2 text-right">
+                      <button onClick={() => removeCattle(c.id)} className="text-slate-400 hover:text-red-600" title="Delete">
+                        ✕
+                      </button>
+                    </td>
                   </tr>
                 ))}
                 {other.map((o) => (
@@ -399,6 +431,45 @@ export function Purchases() {
                     <td className="py-2 pr-3 text-slate-800">{o.description ?? 'Purchase'}</td>
                     <td className="py-2 pr-3 text-slate-500">{supName_(o.supplier_id)}</td>
                     <td className="py-2 pr-3 text-right tabular-nums">{money(o.total_cost)}</td>
+                    <td className="py-2 text-right">
+                      <button onClick={() => removeOther(o.id)} className="text-slate-400 hover:text-red-600" title="Delete">
+                        ✕
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+
+      <Card className="mt-4">
+        <div className="mb-2 text-sm font-medium text-slate-700">Recent supplier payments</div>
+        {payments.length === 0 ? (
+          <div className="py-4 text-center text-sm text-slate-400">No payments recorded yet.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500">
+                  <th className="py-2 pr-3">Date</th>
+                  <th className="py-2 pr-3">Supplier</th>
+                  <th className="py-2 pr-3 text-right">Amount</th>
+                  <th className="py-2"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {payments.map((p) => (
+                  <tr key={p.id} className="border-b border-slate-100 last:border-0">
+                    <td className="py-2 pr-3 tabular-nums text-slate-500">{p.paid_on}</td>
+                    <td className="py-2 pr-3 text-slate-800">{p.supplier?.name ?? '—'}</td>
+                    <td className="py-2 pr-3 text-right tabular-nums">{money(p.amount)}</td>
+                    <td className="py-2 text-right">
+                      <button onClick={() => removePayment(p.id)} className="text-slate-400 hover:text-red-600" title="Delete">
+                        ✕
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>

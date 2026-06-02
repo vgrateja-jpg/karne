@@ -153,6 +153,14 @@ export function Cash() {
     }
   }
 
+  async function removeTxn(id: string) {
+    if (!window.confirm('Delete this movement? (A transfer has two lines — delete both.)')) return
+    setError(null)
+    const { error } = await supabase.from('bank_transactions').delete().eq('id', id)
+    if (error) setError(error.message)
+    else load()
+  }
+
   async function transfer() {
     setError(null)
     if (!fromAcct || !toAcct || fromAcct === toAcct || xferAmt === '' || Number(xferAmt) <= 0) {
@@ -391,6 +399,7 @@ export function Cash() {
                   <th className="py-2 pr-3">Type</th>
                   <th className="py-2 pr-3">Reference</th>
                   <th className="py-2 pr-3 text-right">Amount</th>
+                  <th className="py-2"></th>
                 </tr>
               </thead>
               <tbody>
@@ -402,6 +411,11 @@ export function Cash() {
                     <td className="py-2 pr-3 text-slate-500">{t.reference ?? '—'}</td>
                     <td className={`py-2 pr-3 text-right tabular-nums ${t.amount < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
                       {money(t.amount)}
+                    </td>
+                    <td className="py-2 text-right">
+                      <button onClick={() => removeTxn(t.id)} className="text-slate-400 hover:text-red-600" title="Delete">
+                        ✕
+                      </button>
                     </td>
                   </tr>
                 ))}

@@ -14,6 +14,7 @@ interface Staff {
   is_active: boolean
 }
 interface SalaryRow {
+  id: string
   spent_on: string
   payee: string | null
   amount: number
@@ -120,7 +121,7 @@ export function Staff() {
       supabase.from('staff_attendance').select('staff_id').eq('present', true).gte('work_date', from).lte('work_date', to),
       supabase
         .from('expenses')
-        .select('spent_on,payee,amount,period_start,period_end')
+        .select('id,spent_on,payee,amount,period_start,period_end')
         .not('staff_id', 'is', null)
         .order('spent_on', { ascending: false })
         .limit(20),
@@ -208,6 +209,12 @@ export function Staff() {
       setAmt({})
       loadDay()
     }
+  }
+
+  async function removeSalary(id: string) {
+    if (!window.confirm('Delete this salary payment?')) return
+    await supabase.from('expenses').delete().eq('id', id)
+    loadDay()
   }
 
   const dailyStaff = staff.filter((s) => s.pay_basis === 'daily')
@@ -426,11 +433,12 @@ export function Staff() {
                   <th className="py-2 pr-3">Staff</th>
                   <th className="py-2 pr-3">Period</th>
                   <th className="py-2 pr-3 text-right">Amount</th>
+                  <th className="py-2"></th>
                 </tr>
               </thead>
               <tbody>
-                {recent.map((r, i) => (
-                  <tr key={i} className="border-b border-slate-100 last:border-0">
+                {recent.map((r) => (
+                  <tr key={r.id} className="border-b border-slate-100 last:border-0">
                     <td className="py-2 pr-3 tabular-nums text-slate-500">{r.spent_on}</td>
                     <td className="py-2 pr-3 text-slate-800">{r.payee ?? '—'}</td>
                     <td className="py-2 pr-3 text-slate-500">
@@ -439,6 +447,11 @@ export function Staff() {
                         : `${fmtDayLabel(r.period_start ?? '')}–${fmtDayLabel(r.period_end ?? '')}`}
                     </td>
                     <td className="py-2 pr-3 text-right tabular-nums">{money(r.amount)}</td>
+                    <td className="py-2 text-right">
+                      <button onClick={() => removeSalary(r.id)} className="text-slate-400 hover:text-red-600" title="Delete">
+                        ✕
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>

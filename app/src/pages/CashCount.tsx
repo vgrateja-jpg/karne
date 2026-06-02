@@ -62,6 +62,12 @@ export function CashCount() {
 
   const variance = counted === '' || expected === null ? 0 : Number(counted) - expected
 
+  async function removeCount(id: string) {
+    if (!window.confirm('Delete this saved count?')) return
+    await supabase.from('cash_counts').delete().eq('id', id)
+    setRecent((prev) => prev.filter((r) => r.id !== id))
+  }
+
   async function saveCount() {
     setError(null)
     setOk(null)
@@ -179,6 +185,7 @@ export function CashCount() {
                   <th className="py-2 pr-3 text-right">Expected</th>
                   <th className="py-2 pr-3 text-right">Counted</th>
                   <th className="py-2 pr-3 text-right">Difference</th>
+                  <th className="py-2"></th>
                 </tr>
               </thead>
               <tbody>
@@ -191,6 +198,11 @@ export function CashCount() {
                       <td className="py-2 pr-3 text-right tabular-nums">{money(r.counted)}</td>
                       <td className={`py-2 pr-3 text-right tabular-nums ${Math.abs(diff) < 0.005 ? 'text-emerald-600' : 'text-rose-600'}`}>
                         {(diff > 0 ? '+' : '') + money(diff)}
+                      </td>
+                      <td className="py-2 text-right">
+                        <button onClick={() => removeCount(r.id)} className="text-slate-400 hover:text-red-600" title="Delete">
+                          ✕
+                        </button>
                       </td>
                     </tr>
                   )

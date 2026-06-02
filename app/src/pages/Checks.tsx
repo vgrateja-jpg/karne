@@ -68,6 +68,13 @@ export function Checks() {
     else setRows((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)))
   }
 
+  async function remove(id: string) {
+    if (!window.confirm('Delete this cheque record?')) return
+    const { error } = await supabase.from('checks').delete().eq('id', id)
+    if (error) setError(error.message)
+    else setRows((prev) => prev.filter((r) => r.id !== id))
+  }
+
   const pendingIn = rows
     .filter((r) => r.direction === 'received' && (r.status === 'pending' || r.status === 'deposited'))
     .reduce((s, r) => s + Number(r.amount), 0)
@@ -143,6 +150,7 @@ export function Checks() {
                   <th className="py-2 pr-3">Cheque</th>
                   <th className="py-2 pr-3 text-right">Amount</th>
                   <th className="py-2 pr-3">Status</th>
+                  <th className="py-2"></th>
                 </tr>
               </thead>
               <tbody>
@@ -167,6 +175,11 @@ export function Checks() {
                             </option>
                           ))}
                         </Select>
+                      </td>
+                      <td className="py-2 text-right">
+                        <button onClick={() => remove(r.id)} className="text-slate-400 hover:text-red-600" title="Delete">
+                          ✕
+                        </button>
                       </td>
                     </tr>
                   )

@@ -33,6 +33,7 @@ export function Loans() {
 
   const [accounts, setAccounts] = useState<Acct[]>([])
   const [businessName, setBusinessName] = useState('')
+  const [txns, setTxns] = useState<{ id: string; txn_on: string; type: string; amount: number; loan: { party_name: string } | null }[]>([])
 
   // loan ledger
   const [stmt, setStmt] = useState<{ id: string; party: string } | null>(null)
@@ -61,10 +62,15 @@ export function Loans() {
 
   async function load() {
     setLoading(true)
-    const [l, b, a] = await Promise.all([
+    const [l, b, a, t] = await Promise.all([
       supabase.from('loans').select('*').eq('is_active', true).order('party_name'),
       supabase.from('v_loan_balance').select('loan_id,balance'),
       supabase.from('bank_accounts').select('id,name,type').eq('is_active', true).order('name'),
+      supabase
+        .from('loan_transactions')
+        .select('id,txn_on,type,amount,loan:loans(party_name)')
+        .order('txn_on', { ascending: false })
+        .limit(50),
     ])
     if (l.error) setError(l.error.message)
     else setLoans((l.data ?? []) as Loan[])
@@ -73,6 +79,7 @@ export function Loans() {
       for (const r of b.data as LoanBalance[]) map[r.loan_id] = r.balance
       setBalances(map)
     }
+    if (t.data) setTxns(t.data as unknown as typeof txns)
     if (a.data) {
       setAccounts(a.data as Acct[])
       setTxAccount((prev) => prev || (a.data as Acct[]).find((x) => x.type === 'cash')?.id || '')
@@ -121,6 +128,19 @@ export function Loans() {
       setTxAmt('')
       load()
     }
+  }
+
+  async function removeLoan(id: string, party: string) {
+    if (!window.confirm(`Delete the loan for "${party}" and all its entries?`)) return
+    const { error } = await supabase.from('loans').delete().eq('id', id)
+    if (error) setError(error.message)
+    else load()
+  }
+  async function removeTxn(id: string) {
+    if (!window.confirm('Delete this loan entry?')) return
+    const { error } = await supabase.from('loan_transactions').delete().eq('id', id)
+    if (error) setError(error.message)
+    else load()
   }
 
   const payable = loans.filter((l) => l.direction === 'payable').reduce((s, l) => s + (balances[l.id] ?? 0), 0)
@@ -244,6 +264,7 @@ export function Loans() {
                   <th className="py-2 pr-3">Direction</th>
                   <th className="py-2 pr-3">Notes</th>
                   <th className="py-2 pr-3 text-right">Balance</th>
+                  <th className="py-2"></th>
                 </tr>
               </thead>
               <tbody>
@@ -258,6 +279,54 @@ export function Loans() {
                     <td className="py-2 pr-3 text-slate-500">{l.notes ?? '—'}</td>
                     <td className={`py-2 pr-3 text-right tabular-nums ${l.direction === 'payable' ? 'text-rose-600' : 'text-emerald-600'}`}>
                       {money(balances[l.id] ?? 0)}
+                    </td>
+                    <td className="py-2 text-right">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          removeLoan(l.id, l.party_name)
+                        }}
+                        className="text-slate-400 hover:text-red-600"
+                        title="Delete loan"
+                      >
+                        ✕
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+
+      <Card className="mt-4">
+        <div className="mb-2 text-sm font-medium text-slate-700">Recent loan entries</div>
+        {txns.length === 0 ? (
+          <div className="py-3 text-center text-sm text-slate-400">No entries yet.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500">
+                  <th className="py-2 pr-3">Date</th>
+                  <th className="py-2 pr-3">Party</th>
+                  <th className="py-2 pr-3">Type</th>
+                  <th className="py-2 pr-3 text-right">Amount</th>
+                  <th className="py-2"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {txns.map((t) => (
+                  <tr key={t.id} className="border-b border-slate-100 last:border-0">
+                    <td className="py-2 pr-3 tabular-nums text-slate-500">{t.txn_on}</td>
+                    <td className="py-2 pr-3 text-slate-800">{t.loan?.party_name ?? '—'}</td>
+                    <td className="py-2 pr-3 text-slate-500">{t.type}</td>
+                    <td className="py-2 pr-3 text-right tabular-nums">{money(t.amount)}</td>
+                    <td className="py-2 text-right">
+                      <button onClick={() => removeTxn(t.id)} className="text-slate-400 hover:text-red-600" title="Delete">
+                        ✕
+                      </button>
                     </td>
                   </tr>
                 ))}

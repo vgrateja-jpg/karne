@@ -39,6 +39,19 @@ export function Products() {
     load()
   }, [])
 
+  async function deleteProduct(id: string, name: string) {
+    if (!window.confirm(`Delete "${name}"? This can't be undone.`)) return
+    setError(null)
+    const { error } = await supabase.from('products').delete().eq('id', id)
+    if (error) {
+      setError(
+        /foreign key|violates/i.test(error.message)
+          ? `Can't delete "${name}" — it's used in orders, stock, or butchering. Edit it instead, or set its price to 0.`
+          : error.message,
+      )
+    } else load()
+  }
+
   async function save() {
     if (!editing) return
     setError(null)
@@ -160,22 +173,27 @@ export function Products() {
                     <td className="py-2 pr-3 text-right tabular-nums text-slate-500">{money(p.base_price)}</td>
                     <td className="py-2 pr-3 text-right tabular-nums">{money(p.price)}</td>
                     <td className="py-2 text-right">
-                      <Button
-                        variant="ghost"
-                        onClick={() =>
-                          setEditing({
-                            id: p.id,
-                            name: p.name,
-                            category: (p.category ?? 'other') as Category,
-                            unit: p.unit,
-                            base_price: p.base_price,
-                            price: p.price,
-                            is_active: p.is_active,
-                          })
-                        }
-                      >
-                        Edit
-                      </Button>
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          onClick={() =>
+                            setEditing({
+                              id: p.id,
+                              name: p.name,
+                              category: (p.category ?? 'other') as Category,
+                              unit: p.unit,
+                              base_price: p.base_price,
+                              price: p.price,
+                              is_active: p.is_active,
+                            })
+                          }
+                        >
+                          Edit
+                        </Button>
+                        <Button variant="danger" onClick={() => deleteProduct(p.id, p.name)}>
+                          Delete
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
