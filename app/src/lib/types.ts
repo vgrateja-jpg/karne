@@ -120,6 +120,7 @@ export interface Expense {
   amount: number
   bank_account_id: string | null
   notes: string | null
+  channel: 'store' | 'delivery' | 'shared'
 }
 
 export interface Supplier {

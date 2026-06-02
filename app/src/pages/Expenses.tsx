@@ -22,6 +22,7 @@ export function Expenses() {
   const [payee, setPayee] = useState('')
   const [amount, setAmount] = useState<number | ''>('')
   const [accountId, setAccountId] = useState('')
+  const [channel, setChannel] = useState<'store' | 'delivery' | 'shared'>('shared')
   const [busy, setBusy] = useState(false)
 
   async function load() {
@@ -52,14 +53,20 @@ export function Expenses() {
       payee: payee.trim() || null,
       amount: Number(amount),
       bank_account_id: accountId || null,
+      channel,
     })
     setBusy(false)
     if (error) setError(error.message)
     else {
       setAmount('')
       setPayee('')
-      load()
+      load() // keep the chosen side, so several same-side expenses are quick to add
     }
+  }
+
+  async function setRowChannel(id: string, ch: string) {
+    await supabase.from('expenses').update({ channel: ch }).eq('id', id)
+    load()
   }
 
   const month = today().slice(0, 7)
@@ -86,7 +93,7 @@ export function Expenses() {
       )}
 
       <Card className="mb-4">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-5">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-6">
           <Field label="Date">
             <Input type="date" value={spentOn} onChange={(e) => setSpentOn(e.target.value)} />
           </Field>
@@ -97,6 +104,13 @@ export function Expenses() {
                 <option key={c} value={c} />
               ))}
             </datalist>
+          </Field>
+          <Field label="Side">
+            <Select value={channel} onChange={(e) => setChannel(e.target.value as 'store' | 'delivery' | 'shared')}>
+              <option value="shared">Shared</option>
+              <option value="store">Store</option>
+              <option value="delivery">Delivery</option>
+            </Select>
           </Field>
           <Field label="Payee / note">
             <Input value={payee} onChange={(e) => setPayee(e.target.value)} placeholder="optional" />
@@ -140,6 +154,7 @@ export function Expenses() {
                 <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500">
                   <th className="py-2 pr-3">Date</th>
                   <th className="py-2 pr-3">Category</th>
+                  <th className="py-2 pr-3">Side</th>
                   <th className="py-2 pr-3">Payee</th>
                   <th className="py-2 pr-3">Paid from</th>
                   <th className="py-2 pr-3 text-right">Amount</th>
@@ -151,6 +166,17 @@ export function Expenses() {
                   <tr key={r.id} className="border-b border-slate-100 last:border-0">
                     <td className="py-2 pr-3 tabular-nums text-slate-500">{r.spent_on}</td>
                     <td className="py-2 pr-3 font-medium text-slate-800">{r.category ?? '—'}</td>
+                    <td className="py-2 pr-3">
+                      <select
+                        value={r.channel ?? 'shared'}
+                        onChange={(e) => setRowChannel(r.id, e.target.value)}
+                        className="rounded border border-slate-200 bg-white px-1 py-0.5 text-xs text-slate-600"
+                      >
+                        <option value="shared">Shared</option>
+                        <option value="store">Store</option>
+                        <option value="delivery">Delivery</option>
+                      </select>
+                    </td>
                     <td className="py-2 pr-3 text-slate-500">{r.payee ?? '—'}</td>
                     <td className="py-2 pr-3 text-slate-500">{acctName(r.bank_account_id)}</td>
                     <td className="py-2 pr-3 text-right tabular-nums">{money(r.amount)}</td>
