@@ -230,7 +230,8 @@ export function IncomeStatement({ from, to }: { from: string; to: string }) {
         </div>
       ) : (
         <div>
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[20rem] text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-xs uppercase text-slate-500">
                 <th className="py-1.5 text-left font-medium"></th>
@@ -274,6 +275,7 @@ export function IncomeStatement({ from, to }: { from: string; to: string }) {
               </tr>
             </tbody>
           </table>
+          </div>
 
           <div className="no-print mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-slate-100 pt-2 text-xs text-slate-500">
             <span>Shared stock value —</span>

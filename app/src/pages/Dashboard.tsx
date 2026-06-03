@@ -11,7 +11,7 @@ function Stat({ label, value, sub, tone }: { label: string; value: string; sub?:
   return (
     <Card>
       <div className="text-xs uppercase tracking-wide text-slate-500">{label}</div>
-      <div className={`mt-1 text-2xl font-semibold tabular-nums ${color}`}>{value}</div>
+      <div className={`mt-1 break-words text-xl font-semibold leading-tight tabular-nums sm:text-2xl ${color}`}>{value}</div>
       {sub && <div className="text-xs text-slate-400">{sub}</div>}
     </Card>
   )

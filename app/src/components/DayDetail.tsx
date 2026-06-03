@@ -29,7 +29,7 @@ function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg border border-slate-200 p-2 text-center">
       <div className="text-[10px] uppercase tracking-wide text-slate-500">{label}</div>
-      <div className="text-base font-semibold tabular-nums text-slate-900">{value}</div>
+      <div className="break-words text-sm font-semibold leading-tight tabular-nums text-slate-900 sm:text-base">{value}</div>
     </div>
   )
 }
@@ -70,7 +70,7 @@ export function DayDetail({ date }: { date: string }) {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
         <Stat label="Sales" value={money(period?.sales ?? 0)} />
         <Stat label="Orders" value={String(period?.orders ?? 0)} />
         <Stat label="Cash sales" value={money(period?.cash_sales ?? 0)} />
