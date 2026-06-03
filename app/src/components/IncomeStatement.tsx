@@ -223,8 +223,9 @@ export function IncomeStatement({ from, to }: { from: string; to: string }) {
             value={<span className={net < 0 ? 'text-rose-600' : 'text-emerald-700'}>{money(net)}</span>}
           />
           <p className="no-print mt-2 text-[11px] text-slate-400">
-            Stock value is filled in automatically from your prices. Tap <span className="text-rose-600">edit</span> to type the
-            real value after a stock count. Beginning inventory carries over from the previous period.
+            Stock value is filled in automatically at your <strong>cost</strong> (the Cost on the Prices screen). Tap{' '}
+            <span className="text-rose-600">edit</span> to type the real value after a stock count. Beginning inventory carries
+            over from the previous period.
           </p>
         </div>
       ) : (

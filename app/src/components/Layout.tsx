@@ -54,6 +54,7 @@ const groups: NavGroup[] = [
       { to: '/expenses', label: 'Expenses', icon: '💸' },
       { to: '/checks', label: 'Cheques', icon: '💳' },
       { to: '/loans', label: 'Loans', icon: '🏦' },
+      { to: '/equity', label: 'Net Worth', icon: '⚖️' },
     ],
   },
   {

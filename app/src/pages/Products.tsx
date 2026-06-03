@@ -116,7 +116,7 @@ export function Products() {
                 ))}
               </datalist>
             </Field>
-            <Field label="Unit price (base)">
+            <Field label="Cost (what you pay)">
               <Input
                 type="number"
                 step="0.01"
@@ -159,7 +159,7 @@ export function Products() {
                   <th className="py-2 pr-3">Name</th>
                   <th className="py-2 pr-3">Category</th>
                   <th className="py-2 pr-3">Unit</th>
-                  <th className="py-2 pr-3 text-right">Unit price</th>
+                  <th className="py-2 pr-3 text-right">Cost</th>
                   <th className="py-2 pr-3 text-right">Sale price</th>
                   <th className="py-2"></th>
                 </tr>
