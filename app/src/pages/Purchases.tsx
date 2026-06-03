@@ -35,6 +35,7 @@ export function Purchases() {
   const [cDate, setCDate] = useState(today())
   const [cWeight, setCWeight] = useState<number | ''>('')
   const [cPrice, setCPrice] = useState<number | ''>('')
+  const [cPayAccount, setCPayAccount] = useState('')
 
   // other purchase form
   const [oSup, setOSup] = useState('')
@@ -43,6 +44,7 @@ export function Purchases() {
   const [oQty, setOQty] = useState<number | ''>('')
   const [oUnit, setOUnit] = useState('kg')
   const [oCost, setOCost] = useState<number | ''>('')
+  const [oPayAccount, setOPayAccount] = useState('')
 
   async function load() {
     setLoading(true)
@@ -69,7 +71,10 @@ export function Purchases() {
     if (a.data) {
       const accs = a.data as { id: string; name: string; type: string }[]
       setAccounts(accs)
-      setPayAccount((prev) => prev || accs.find((x) => x.type === 'cash')?.id || '')
+      const cashId = accs.find((x) => x.type === 'cash')?.id || ''
+      setPayAccount((prev) => prev || cashId)
+      setCPayAccount((prev) => prev || cashId)
+      setOPayAccount((prev) => prev || cashId)
     }
     setLoading(false)
   }
@@ -119,6 +124,7 @@ export function Purchases() {
       return
     }
     setBusy(true)
+    const total = Number(cWeight) * Number(cPrice)
     const { error } = await supabase.from('cattle_purchases').insert({
       tag: cTag.trim() || null,
       supplier_id: cSup || null,
@@ -126,13 +132,29 @@ export function Purchases() {
       weight_kg: Number(cWeight),
       price_per_kg: Number(cPrice),
     })
+    if (error) {
+      setBusy(false)
+      setError(friendlyError(error.message))
+      return
+    }
+    // If paid now, take it out of the chosen account (and clear the supplier owing).
+    if (cPayAccount && total > 0) await payFromAccount(cPayAccount, cSup, total, cDate, 'Cattle purchase')
     setBusy(false)
-    if (error) setError(friendlyError(error.message))
-    else {
-      setCTag('')
-      setCWeight('')
-      setCPrice('')
-      load()
+    setCTag('')
+    setCWeight('')
+    setCPrice('')
+    load()
+  }
+
+  // Records money leaving an account for a purchase: a supplier payment (which
+  // also clears what's owed) if there's a supplier, else a plain cash withdrawal.
+  async function payFromAccount(accountId: string, supplierId: string, amount: number, date: string, ref: string) {
+    if (supplierId) {
+      await supabase.from('supplier_payments').insert({ supplier_id: supplierId, amount, paid_on: date, bank_account_id: accountId })
+    } else {
+      await supabase
+        .from('bank_transactions')
+        .insert({ bank_account_id: accountId, txn_on: date, amount: -amount, type: 'withdrawal', reference: ref })
     }
   }
 
@@ -169,14 +191,17 @@ export function Purchases() {
       p_qty: wantsStock ? Number(oQty) : null,
       p_total_cost: Number(oCost),
     })
-    setBusy(false)
-    if (error) setError(friendlyError(error.message))
-    else {
-      setOName('')
-      setOQty('')
-      setOCost('')
-      load()
+    if (error) {
+      setBusy(false)
+      setError(friendlyError(error.message))
+      return
     }
+    if (oPayAccount && Number(oCost) > 0) await payFromAccount(oPayAccount, oSup, Number(oCost), oDate, name || 'Purchase')
+    setBusy(false)
+    setOName('')
+    setOQty('')
+    setOCost('')
+    load()
   }
 
   async function saveSupplier() {
@@ -392,6 +417,16 @@ export function Purchases() {
             <Field label="Date">
               <Input type="date" value={cDate} onChange={(e) => setCDate(e.target.value)} />
             </Field>
+            <Field label="Paid from">
+              <Select value={cPayAccount} onChange={(e) => setCPayAccount(e.target.value)}>
+                <option value="">— On credit (pay later) —</option>
+                {accounts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
             <div className="flex flex-col justify-end">
               <span className="mb-1 block text-xs font-medium text-slate-600">Total</span>
               <div className="rounded-lg bg-slate-50 px-3 py-2 text-sm font-semibold tabular-nums">{money(cattleTotal)}</div>
@@ -435,17 +470,28 @@ export function Purchases() {
               <Input list="other-items" value={oName} onChange={(e) => setOName(e.target.value)} placeholder="e.g. pork, chicken" />
             </Field>
             <Field label="Quantity (optional)">
-              <div className="flex gap-1">
-                <NumberInput value={oQty} onChange={setOQty} className="flex-1" placeholder="qty" />
-                <Input list="other-units" value={oUnit} onChange={(e) => setOUnit(e.target.value)} className="w-16" />
+              <div className="grid grid-cols-2 gap-1">
+                <NumberInput value={oQty} onChange={setOQty} placeholder="qty" />
+                <Input list="other-units" value={oUnit} onChange={(e) => setOUnit(e.target.value)} />
               </div>
             </Field>
             <Field label="Total cost">
               <NumberInput value={oCost} onChange={setOCost} />
             </Field>
+            <Field label="Paid from">
+              <Select value={oPayAccount} onChange={(e) => setOPayAccount(e.target.value)}>
+                <option value="">— On credit (pay later) —</option>
+                {accounts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
           </div>
           <p className="mt-2 text-xs text-slate-400">
             Add an item + quantity to put it straight into <strong>Stock</strong>. Leave them blank to just record a cost.
+            “Paid from” takes the money out of that account now; pick “On credit” if you'll pay the supplier later.
           </p>
           <div className="mt-2">
             <Button onClick={addOther} disabled={busy}>

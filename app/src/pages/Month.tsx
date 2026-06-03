@@ -39,6 +39,7 @@ export function Month() {
   const [daily, setDaily] = useState<DailyRow[]>([])
   const [byProduct, setByProduct] = useState<ProductRow[]>([])
   const [byCustomer, setByCustomer] = useState<CustomerRow[]>([])
+  const [byCat, setByCat] = useState<{ category: string; amount: number }[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [settings, setSettings] = useState<AppSettings | null>(null)
@@ -64,15 +65,17 @@ export function Month() {
       setError(null)
       const { from, to } = monthRange(year, month)
       const branch = branchId || null
-      const [d, p, c] = await Promise.all([
+      const [d, p, c, e] = await Promise.all([
         supabase.rpc('report_daily', { p_from: from, p_to: to, p_branch: branch }),
         supabase.rpc('report_sales_by_product', { p_from: from, p_to: to, p_branch: branch }),
         supabase.rpc('report_sales_by_customer', { p_from: from, p_to: to, p_branch: branch }),
+        supabase.rpc('report_expenses_by_category', { p_from: from, p_to: to }),
       ])
       if (d.error) setError(d.error.message)
       setDaily((d.data ?? []) as DailyRow[])
       setByProduct((p.data ?? []) as ProductRow[])
       setByCustomer((c.data ?? []) as CustomerRow[])
+      setByCat((e.data ?? []) as { category: string; amount: number }[])
       setLoading(false)
     }
     load()
@@ -251,6 +254,38 @@ export function Month() {
                         <td className="py-1.5 pr-2 font-medium text-slate-800">{r.name}</td>
                         <td className="py-1.5 pr-2 text-right tabular-nums text-slate-500">{r.orders_count}</td>
                         <td className="py-1.5 text-right tabular-nums">{money(r.total_amount)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+
+          {/* Expenses by category */}
+          <Card>
+            <div className="mb-2 flex items-baseline justify-between">
+              <span className="text-sm font-medium text-slate-700">Expenses by category</span>
+              <span className="text-xs text-slate-500 tabular-nums">
+                {money(byCat.reduce((s, r) => s + Number(r.amount), 0))}
+              </span>
+            </div>
+            {byCat.length === 0 ? (
+              <div className="py-6 text-center text-slate-400">—</div>
+            ) : (
+              <div className="max-h-96 overflow-y-auto">
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 bg-white">
+                    <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500">
+                      <th className="py-2 pr-2">Category</th>
+                      <th className="py-2 text-right">Spent</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {byCat.map((r) => (
+                      <tr key={r.category} className="border-b border-slate-100 last:border-0">
+                        <td className="py-1.5 pr-2 font-medium text-slate-800">{r.category}</td>
+                        <td className="py-1.5 text-right tabular-nums">{money(r.amount)}</td>
                       </tr>
                     ))}
                   </tbody>
