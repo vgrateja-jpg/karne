@@ -30,6 +30,7 @@ export function OrderDetail() {
   const [branches, setBranches] = useState<Branch[]>([])
   const [customerId, setCustomerId] = useState('')
   const [branchId, setBranchId] = useState('')
+  const [side, setSide] = useState<'store' | 'delivery'>('store')
   const [orderDate, setOrderDate] = useState('')
   const [notes, setNotes] = useState('')
   const [status, setStatus] = useState<OrderStatus>('confirmed')
@@ -53,6 +54,7 @@ export function OrderDetail() {
     else {
       setCustomerId(o.data.customer_id ?? '')
       setBranchId(o.data.branch_id ?? '')
+      setSide((o.data.side as 'store' | 'delivery') ?? 'store')
       setOrderDate(o.data.order_date)
       setNotes(o.data.notes ?? '')
       setStatus(o.data.status)
@@ -109,7 +111,7 @@ export function OrderDetail() {
       p_notes: notes.trim() || null,
       p_items: valid.map((l) => ({ product_id: l.product_id, quantity: l.quantity, unit_price: l.unit_price })),
     })
-    if (!error) await supabase.from('orders').update({ branch_id: branchId || null }).eq('id', id)
+    if (!error) await supabase.from('orders').update({ branch_id: branchId || null, side }).eq('id', id)
     setBusy(false)
     if (error) setError(error.message)
     else {
@@ -201,6 +203,12 @@ export function OrderDetail() {
           </Field>
           <Field label="Date">
             <Input type="date" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} disabled={isVoid} />
+          </Field>
+          <Field label="Sale type">
+            <Select value={side} onChange={(e) => setSide(e.target.value as 'store' | 'delivery')} disabled={isVoid}>
+              <option value="store">Store (walk-in)</option>
+              <option value="delivery">Delivery</option>
+            </Select>
           </Field>
           <Field label="Notes">
             <Input value={notes} onChange={(e) => setNotes(e.target.value)} disabled={isVoid} />

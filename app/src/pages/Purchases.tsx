@@ -36,6 +36,7 @@ export function Purchases() {
   const [cWeight, setCWeight] = useState<number | ''>('')
   const [cPrice, setCPrice] = useState<number | ''>('')
   const [cPayAccount, setCPayAccount] = useState('')
+  const [cChannel, setCChannel] = useState<'store' | 'delivery' | 'shared'>('shared')
 
   // other purchase form
   const [oSup, setOSup] = useState('')
@@ -45,6 +46,7 @@ export function Purchases() {
   const [oUnit, setOUnit] = useState('kg')
   const [oCost, setOCost] = useState<number | ''>('')
   const [oPayAccount, setOPayAccount] = useState('')
+  const [oChannel, setOChannel] = useState<'store' | 'delivery' | 'shared'>('shared')
 
   async function load() {
     setLoading(true)
@@ -131,6 +133,7 @@ export function Purchases() {
       purchased_on: cDate,
       weight_kg: Number(cWeight),
       price_per_kg: Number(cPrice),
+      channel: cChannel,
     })
     if (error) {
       setBusy(false)
@@ -183,7 +186,7 @@ export function Purchases() {
         productId = (ins.data as { id: string }).id
       }
     }
-    const { error } = await supabase.rpc('record_other_purchase', {
+    const { data, error } = await supabase.rpc('record_other_purchase', {
       p_supplier: oSup || null,
       p_date: oDate,
       p_description: name || null,
@@ -196,6 +199,7 @@ export function Purchases() {
       setError(friendlyError(error.message))
       return
     }
+    if (data) await supabase.from('purchases').update({ channel: oChannel }).eq('id', data)
     if (oPayAccount && Number(oCost) > 0) await payFromAccount(oPayAccount, oSup, Number(oCost), oDate, name || 'Purchase')
     setBusy(false)
     setOName('')
@@ -427,6 +431,13 @@ export function Purchases() {
                 ))}
               </Select>
             </Field>
+            <Field label="For">
+              <Select value={cChannel} onChange={(e) => setCChannel(e.target.value as 'store' | 'delivery' | 'shared')}>
+                <option value="shared">Shared</option>
+                <option value="store">Store</option>
+                <option value="delivery">Delivery</option>
+              </Select>
+            </Field>
             <div className="flex flex-col justify-end">
               <span className="mb-1 block text-xs font-medium text-slate-600">Total</span>
               <div className="rounded-lg bg-slate-50 px-3 py-2 text-sm font-semibold tabular-nums">{money(cattleTotal)}</div>
@@ -486,6 +497,13 @@ export function Purchases() {
                     {a.name}
                   </option>
                 ))}
+              </Select>
+            </Field>
+            <Field label="For">
+              <Select value={oChannel} onChange={(e) => setOChannel(e.target.value as 'store' | 'delivery' | 'shared')}>
+                <option value="shared">Shared</option>
+                <option value="store">Store</option>
+                <option value="delivery">Delivery</option>
               </Select>
             </Field>
           </div>

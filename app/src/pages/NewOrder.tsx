@@ -23,6 +23,7 @@ export function NewOrder() {
   const [balances, setBalances] = useState<Record<string, number>>({})
   const [customerId, setCustomerId] = useState('')
   const [branchId, setBranchId] = useState('')
+  const [side, setSide] = useState<'store' | 'delivery'>('store')
   const [orderDate, setOrderDate] = useState(today())
   const [channel, setChannel] = useState<OrderChannel>('manual')
   const [notes, setNotes] = useState('')
@@ -100,9 +101,7 @@ export function NewOrder() {
       setError(error.message)
       return
     }
-    if (branchId) {
-      await supabase.from('orders').update({ branch_id: branchId }).eq('id', data)
-    }
+    await supabase.from('orders').update({ branch_id: branchId || null, side }).eq('id', data)
     setBusy(false)
     navigate(`/orders?new=${data}`)
   }
@@ -119,13 +118,25 @@ export function NewOrder() {
       <Card className="mb-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
           <Field label="Customer">
-            <Select value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
+            <Select
+              value={customerId}
+              onChange={(e) => {
+                setCustomerId(e.target.value)
+                setSide(e.target.value ? 'delivery' : 'store') // sensible default; editable below
+              }}
+            >
               <option value="">— Cash / walk-in —</option>
               {customers.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
                 </option>
               ))}
+            </Select>
+          </Field>
+          <Field label="Sale type">
+            <Select value={side} onChange={(e) => setSide(e.target.value as 'store' | 'delivery')}>
+              <option value="store">Store (walk-in)</option>
+              <option value="delivery">Delivery</option>
             </Select>
           </Field>
           <Field label="Date">
